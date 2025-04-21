@@ -8,21 +8,28 @@ import lordostrov.traderplugin.Traderplugin;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import trade.ManageInventory;
+
+import java.util.*;
 
 public class GUIbuyCoin {
     private static Traderplugin plugin;
+    ManageInventory manageInventory = new ManageInventory();
     private SGMenu homeMenu = plugin.spiGUI.create("&cHome Menu", 1);
     private SGMenu buyMenu = plugin.spiGUI.create("&cCrypto Menu", 1);
     private SGMenu marketMenu = plugin.spiGUI.create("&cMarket", 6);
     private SGMenu walletMenu = plugin.spiGUI.create("&cWallet", 2);
+    private SGMenu sellMenu = plugin.spiGUI.create("&cПродажа ресурсов", 4);
 
     private getCoin coin = new getCoin();
 
     public void openMyAwesomeMenu(Player player) {
 
+
         init_buyMenu(player);
         init_marketMenu(player);
         init_walletMenu(player);
+        init_sellMenu(player);
         init_homeMenu(player);
 
         // Show the GUI
@@ -115,7 +122,7 @@ public class GUIbuyCoin {
                         .name("&aВыставить на продажу")
                         .build()
         ).withListener((InventoryClickEvent event) -> {
-            event.getWhoClicked().sendMessage("Переход в меню для выставления товара");
+
 
         });
 
@@ -141,12 +148,43 @@ public class GUIbuyCoin {
                         .build()
         ).withListener((InventoryClickEvent event) -> {
             // Здесь должен быть переход в меню продажи
+            player.openInventory(sellMenu.getInventory());
 
         });
         // функция для вывода купленных криптовалют (Написать)
 
         walletMenu.setButton(17, back);
         walletMenu.setButton(9, sell);
+    }
+
+    void init_sellMenu(Player player){
+        Map<Material, Integer> inventoryMap = manageInventory.getResourses(player);
+        Set<Material> keys = inventoryMap.keySet();
+        List<Material> keyList = new ArrayList<>(keys);
+
+        for(int i = 0; i < keys.size(); i++){
+            SGButton item = new SGButton(
+                    new ItemBuilder(keyList.get(i))
+                            .name("&a"+keyList.get(i).name())
+                            .amount(inventoryMap.get(keyList.get(i)))
+                            .build()
+            ).withListener((InventoryClickEvent event) -> {
+
+            });
+
+            sellMenu.setButton(i, item);
+        }
+
+        SGButton back = new SGButton(
+                new ItemBuilder(Material.OAK_WOOD)
+                        .name("&aНазад")
+                        .build()
+        ).withListener((InventoryClickEvent event) -> {
+
+            player.openInventory(walletMenu.getInventory());
+        });
+        sellMenu.setButton(35, back);
+
     }
 
     void init_homeMenu(Player player){
