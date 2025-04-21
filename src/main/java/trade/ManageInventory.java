@@ -18,7 +18,6 @@ public class ManageInventory {
     public Map<Material, Integer> getResourses(Player player) {
         Inventory inventory = player.getInventory();
 
-
         // Проходим по всем слотам инвентаря
         for (ItemStack item : inventory.getContents()) {
             if (item != null && item.getType() != Material.AIR) {
@@ -27,9 +26,26 @@ public class ManageInventory {
             }
         }
 
-
         return inventoryMap;
+    }
 
+    public void sellItems(Player player, Material material, int amount) {
+        Inventory inventory = player.getInventory();
+
+        // Перебираем все слоты инвентаря
+        for (ItemStack item : inventory.getContents()) {
+            if (item != null && item.getType() == material) {
+                // Если в стеке больше 1 предмета - уменьшаем количество
+                if (item.getAmount() > amount) {
+                    item.setAmount(item.getAmount() - amount);
+                }
+                // Если ровно 1 предмет - удаляем весь стек
+                else {
+                    inventory.remove(item);
+                }
+                return; // Прекращаем поиск после удаления 1 предмета
+            }
+        }
     }
 
 

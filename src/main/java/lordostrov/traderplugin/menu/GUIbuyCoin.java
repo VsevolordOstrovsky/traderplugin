@@ -7,7 +7,10 @@ import com.samjakob.spigui.menu.SGMenu;
 import lordostrov.traderplugin.Traderplugin;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
+import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryType;
+import org.bukkit.inventory.ItemStack;
 import trade.ManageInventory;
 
 import java.util.*;
@@ -15,11 +18,11 @@ import java.util.*;
 public class GUIbuyCoin {
     private static Traderplugin plugin;
     ManageInventory manageInventory = new ManageInventory();
-    private SGMenu homeMenu = plugin.spiGUI.create("&cHome Menu", 1);
-    private SGMenu buyMenu = plugin.spiGUI.create("&cCrypto Menu", 1);
-    private SGMenu marketMenu = plugin.spiGUI.create("&cMarket", 6);
-    private SGMenu walletMenu = plugin.spiGUI.create("&cWallet", 2);
-    private SGMenu sellMenu = plugin.spiGUI.create("&cПродажа ресурсов", 4);
+    private SGMenu homeMenu = plugin.spiGUI.create("&6Home Menu", 1);
+    private SGMenu buyMenu = plugin.spiGUI.create("&6Crypto Menu", 1);
+    private SGMenu marketMenu = plugin.spiGUI.create("&6Market", 6);
+    private SGMenu walletMenu = plugin.spiGUI.create("&6Wallet", 2);
+    private SGMenu sellMenu = plugin.spiGUI.create("&6Продажа ресурсов", 4);
 
     private getCoin coin = new getCoin();
 
@@ -166,10 +169,49 @@ public class GUIbuyCoin {
             SGButton item = new SGButton(
                     new ItemBuilder(keyList.get(i))
                             .name("&a"+keyList.get(i).name())
-                            .amount(inventoryMap.get(keyList.get(i)))
+                            .lore(
+                                    "&7Количество: &e" + inventoryMap.get(keyList.get(i)),
+                                    "",  // Пустая строка для разделения
+                                    "&l&fПродажа:",
+                                    "&o&7Для 1 штуки: &6ЛКМ",
+                                    "&o&7Для 64 штук: &6ПКМ",
+                                    "&o&7Настроить значение: &6SHIFT+ЛКМ"
+                            )
                             .build()
             ).withListener((InventoryClickEvent event) -> {
+                // Проверка на клик вне меню
+                if (event.getClickedInventory() == null ||
+                        event.getClickedInventory().getType() == InventoryType.PLAYER) {
+                    return;
+                }
 
+                // Получаем ItemStack, по которому кликнули
+                ItemStack clickedItem = event.getCurrentItem();
+                if (clickedItem == null || clickedItem.getType() == Material.AIR) return;
+
+                // Получаем Material кликнутого предмета
+                Material clickedMaterial = clickedItem.getType();
+
+                ClickType clickType = event.getClick();
+
+                if (clickType == ClickType.LEFT) {
+                    // Обработка ЛКМ
+                    player.sendMessage("Вы выбрали: " + clickedMaterial.name());
+                    // Здесь можно вызвать метод для продажи 1 штуки
+                    manageInventory.sellItems(player, clickedMaterial, 1);
+                    player.openInventory(sellMenu.getInventory());
+
+                } else if (clickType == ClickType.RIGHT) {
+                    // Обработка ПКМ
+                    player.sendMessage("Вы выбрали 64: " + clickedMaterial.name());
+                    manageInventory.sellItems(player, clickedMaterial, 64);
+                    player.openInventory(sellMenu.getInventory());
+
+
+                } else if (clickType == ClickType.SHIFT_LEFT) {
+                    // Обработка SHIFT+ЛКМ
+                    player.sendMessage("Настройка продажи: " + clickedMaterial.name());
+                }
             });
 
             sellMenu.setButton(i, item);
@@ -217,5 +259,7 @@ public class GUIbuyCoin {
         homeMenu.setButton(4, crypto);
         homeMenu.setButton(5, wallet);
     }
+
+
 
 }
