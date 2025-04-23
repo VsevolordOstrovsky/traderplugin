@@ -1,5 +1,7 @@
 package lordostrov.traderplugin.coins;
 
+import lordostrov.traderplugin.Traderplugin;
+import lordostrov.traderplugin.menu.CustomInventory;
 import lordostrov.traderplugin.menu.GUIbuyCoin;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
@@ -10,9 +12,14 @@ import org.bukkit.entity.Player;
 import java.io.IOException;
 
 public class Commands implements CommandExecutor {
-
+    private final CustomInventory customInventory;
     private final String category = "spot";
     private final String symbol = "ETHUSDT";
+
+    public Commands(CustomInventory customInventory) {
+        this.customInventory = customInventory;
+    }
+
 
     @Override
     public boolean onCommand(CommandSender commandSender, Command command, String s, String[] strings) {
@@ -69,9 +76,12 @@ public class Commands implements CommandExecutor {
         }
 
         if (command.getName().equalsIgnoreCase("menu")) {
-            GUIbuyCoin guIbuyCoin = new GUIbuyCoin();
+            //GUIbuyCoin guIbuyCoin = new GUIbuyCoin();
+
             Player player = (Player) commandSender;
-            guIbuyCoin.openMyAwesomeMenu(player);
+//            guIbuyCoin.openMyAwesomeMenu(player);
+            customInventory.openInventory(player);
+
             return true;
         }
 
