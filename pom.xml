@@ -56,7 +56,7 @@
                                 <!-- Путь к папке plugins вашего сервера -->
                                 <copy
                                         file="${project.build.directory}/${project.build.finalName}.jar"
-                                        tofile="/home/vsevolod/serverMC/plugins/${project.name}.jar"
+                                        tofile="C:\Server\plugins\${project.name}.jar"
                                 />
                                 <echo>Плагин скопирован в папку сервера!</echo>
                             </target>
@@ -82,10 +82,6 @@
             <id>sonatype</id>
             <url>https://oss.sonatype.org/content/groups/public/</url>
         </repository>
-        <repository>
-            <id>jitpack.io</id>
-            <url>https://jitpack.io</url>
-        </repository>
     </repositories>
 
     <dependencies>
@@ -104,11 +100,6 @@
             <groupId>com.squareup.okhttp3</groupId>
             <artifactId>okhttp</artifactId>
             <version>4.12.0</version> <!-- Используйте актуальную версию -->
-        </dependency>
-        <dependency>
-            <groupId>com.samjakob</groupId>
-            <artifactId>SpiGUI</artifactId>
-            <version>1.4.1</version>
         </dependency>
     </dependencies>
 </project>
