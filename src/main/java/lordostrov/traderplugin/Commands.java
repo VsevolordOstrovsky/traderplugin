@@ -4,6 +4,7 @@ package lordostrov.traderplugin;
 
 import lordostrov.traderplugin.coins.ManageCoin;
 import lordostrov.traderplugin.coins.ParseResponse;
+import lordostrov.traderplugin.manageDB.Manager;
 import lordostrov.traderplugin.menu.CustomInventory;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
@@ -12,12 +13,15 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 import java.io.IOException;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 
 public class Commands implements CommandExecutor {
 
     private final String category = "spot";
     private final String symbol = "ETHUSDT";
     private CustomInventory customInventory = new CustomInventory();
+    Manager manager = new Manager();
 
 
 
@@ -40,8 +44,14 @@ public class Commands implements CommandExecutor {
                 case "BTCUSDT":
                     commandSender.sendMessage(ChatColor.GREEN + "Вы выбрали пару BTC/USDT");
                     break;
+                case "SOLUSDT":
+                    commandSender.sendMessage(ChatColor.GREEN + "Вы выбрали пару SOL/USDT");
+                    break;
+                case "XRPUSDT":
+                    commandSender.sendMessage(ChatColor.GREEN + "Вы выбрали пару XRP/USDT");
+                    break;
                 default:
-                    commandSender.sendMessage(ChatColor.RED + "Неизвестная торговая пара. Доступные варианты: ETHUSDT, BTCUSDT");
+                    commandSender.sendMessage(ChatColor.RED + "Неизвестная торговая пара. Доступные варианты: ETHUSDT, BTCUSDT, ");
             }
             // Проверяем, является ли отправитель команды игроком
             if (!(commandSender instanceof Player)) {
@@ -83,6 +93,42 @@ public class Commands implements CommandExecutor {
             customInventory.openHomeMenu(player);
 
             return true;
+        }
+
+        if (command.getName().equalsIgnoreCase("request")) {
+
+            ResultSet rs = null;
+            try {
+                rs = manager.executeQuery("SELECT * FROM player");
+                System.out.println("Содержимое таблицы player:");
+                System.out.println("----------------------------------------");
+                System.out.printf("| %-36s | %-16s | %-10s | %-6s |%n",
+                        "UUID", "Name", "USDT", "Rating");
+                System.out.println("----------------------------------------");
+
+                while (rs.next()) {
+                    String uuid = rs.getString("uuid");
+                    String name = rs.getString("name");
+                    String usdt = rs.getString("usdt");
+                    int rating = rs.getInt("rating");
+
+                    System.out.printf("| %-36s | %-16s | %-10s | %-6d |%n",
+                            uuid, name, usdt, rating);
+                }
+                System.out.println("----------------------------------------");
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
+            } finally {
+                if (rs != null) {
+                    try {
+                        rs.close();
+                    } catch (SQLException e) {
+                        e.printStackTrace();
+                    }
+                }
+                manager.closeConnection();
+            }
+
         }
 
         return false;

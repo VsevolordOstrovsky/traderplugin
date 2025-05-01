@@ -9,19 +9,20 @@ import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.sql.SQLException;
 
-public final class Traderplugin extends JavaPlugin {
-
+public final class Traderplugin extends JavaPlugin implements Listener {
+    Manager managerDB = new Manager();
 
     @Override
     public void onEnable() {
 
         System.out.println("------------------------------------Traderplugin enabled------------------------------------");
-
+        getServer().getPluginManager().registerEvents(this, this);
 
 
         getServer().getPluginManager().registerEvents(new InventoryListener(), this);
@@ -34,6 +35,7 @@ public final class Traderplugin extends JavaPlugin {
         /*-----------------*/
         this.getCommand("menu").setExecutor(new Commands());
         /*-----------------*/
+        this.getCommand("request").setExecutor(new Commands());
 
         // Создание сайдбара для всех онлайн-игроков
         SidebarManager sidebarManager = new SidebarManager(this);
@@ -44,24 +46,21 @@ public final class Traderplugin extends JavaPlugin {
 
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
-
         System.out.println("---------------------------------------Traderplugin joined-------------------------------");
 
-        Manager managerDB = new Manager();
         Player player = event.getPlayer();
         player.sendTitle(ChatColor.BLUE + player.getName(), "Добро пожаловать!", 0, 75, 0);
-        Bukkit.getScheduler().runTaskAsynchronously(this, new Runnable() {
-            @Override
-            public void run() {
-                // Добавление пользователя в таблицы
-                try {
-                    managerDB.createTables();
-                } catch (SQLException e) {
-                    throw new RuntimeException(e);
-                }
+
+        Bukkit.getScheduler().runTaskAsynchronously(this, () -> {
+            try {
+                // Создаем таблицы если их нет
+                managerDB.createTables();
+                // Добавляем игрока если его нет в БД
+                managerDB.addPlayerIfNotExists(event);
+            } catch (SQLException e) {
+                e.printStackTrace();
             }
         });
-
     }
 
     @Override

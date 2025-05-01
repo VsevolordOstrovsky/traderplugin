@@ -42,20 +42,36 @@ public class Manager {
         }
     }
 
-    private void closeConnection() {
+    public void closeConnection() {
         try {
-            connection.close();
-            statement.close();
-            resultSet.close();
+            if (resultSet != null) {
+                resultSet.close();
+                resultSet = null;
+            }
+            if (statement != null) {
+                statement.close();
+                statement = null;
+            }
+            if (connection != null) {
+                connection.close();
+                connection = null;
+            }
             req = "";
             System.out.println("Connection closed");
         } catch (SQLException e) {
-            throw new RuntimeException(e);
+            e.printStackTrace();
         }
     }
 
     private static void createTablePlayer(Connection conn) throws SQLException {
-        String sql = "CREATE TABLE player(" +
+
+        if (tableExists(conn, "player")) {
+            System.out.println("Таблица [player] уже существует, пропускаем создание");
+            return;
+        }
+
+
+        String sql = "CREATE TABLE IF NOT EXISTS player(" +
                 "    uuid TEXT NOT NULL PRIMARY KEY," +
                 "    name TEXT NOT NULL," +
                 "    usdt TEXT DEFAULT '0'," +
@@ -64,12 +80,17 @@ public class Manager {
 
         try (Statement stmt = conn.createStatement()) {
             stmt.execute(sql);
-            System.out.println("Таблица [player] создана или уже существует");
         }
     }
 
     private static void createTableCryptoPlayer(Connection conn) throws SQLException {
-        String sql = "CREATE TABLE cryptoPlayer(" +
+
+        if (tableExists(conn, "cryptoPlayer")) {
+            System.out.println("Таблица [cryptoPlayer] уже существует, пропускаем создание");
+            return;
+        }
+
+        String sql = "CREATE TABLE IF NOT EXISTS cryptoPlayer(" +
                 "    uuid TEXT NOT NULL PRIMARY KEY," +
                 "    BTC INTEGER DEFAULT 0," +
                 "    ETH INTEGER DEFAULT 0," +
@@ -80,37 +101,46 @@ public class Manager {
 
         try (Statement stmt = conn.createStatement()) {
             stmt.execute(sql);
-            System.out.println("Таблица [cryptoPlayer] создана или уже существует");
         }
     }
 
     private static void createTableMarketPlayer(Connection conn) throws SQLException {
-        String sql = "CREATE TABLE marketPlayer(" +
+
+        if (tableExists(conn, "marketPlayer")) {
+            System.out.println("Таблица [marketPlayer] уже существует, пропускаем создание");
+            return;
+        }
+
+        String sql = "CREATE TABLE IF NOT EXISTS marketPlayer(" +
                 "    uuid TEXT NOT NULL PRIMARY KEY," +
                 "    material TEXT NOT NULL," +
-                "    quantity int not null" +
+                "    quantity int not null," +
                 "    FOREIGN KEY (uuid) REFERENCES player(uuid)" +
                 ");";
 
         try (Statement stmt = conn.createStatement()) {
             stmt.execute(sql);
-            System.out.println("Таблица [marketPlayer] создана или уже существует");
         }
     }
 
     private static void createTableRating(Connection conn) throws SQLException {
-        String sql = "CREATE TABLE rating(" +
+
+        if (tableExists(conn, "rating")) {
+            System.out.println("Таблица [rating] уже существует, пропускаем создание");
+            return;
+        }
+
+        String sql = "CREATE TABLE IF NOT EXISTS rating(" +
                 "    rating INTEGER NOT NULL," +
                 "    uuid TEXT NOT NULL," +
-                "    usdt TEXT NOT null ," +
+                "    usdt TEXT NOT null," +
                 "    FOREIGN KEY (uuid) REFERENCES player(uuid)," +
-                "    FOREIGN KEY (rating) REFERENCES player(rating)" +
+                "    FOREIGN KEY (rating) REFERENCES player(rating)," +
                 "    FOREIGN KEY (usdt) REFERENCES player(usdt)" +
                 ");";
 
         try (Statement stmt = conn.createStatement()) {
             stmt.execute(sql);
-            System.out.println("Таблица [rating] создана или уже существует");
         }
     }
 
@@ -124,35 +154,62 @@ public class Manager {
 
     }
 
-    public void addInTablePlayer(PlayerJoinEvent player){
+    public void addPlayerIfNotExists(PlayerJoinEvent event) throws SQLException {
         getConnection();
-        PreparedStatement ps = null;
         try {
-            statement = connection.createStatement();
-            resultSet = statement.executeQuery("select * from player");
-            while (resultSet.next()) {
-//                получение данных из колонок.
-                if(resultSet.getString("uuid").equals(player.getPlayer().getUniqueId().toString())){
-                    closeConnection();
-                    return;
-                }
+            // Проверяем существование игрока
+            PreparedStatement checkStmt = connection.prepareStatement(
+                    "SELECT uuid FROM player WHERE uuid = ?");
+            checkStmt.setString(1, event.getPlayer().getUniqueId().toString());
+            ResultSet rs = checkStmt.executeQuery();
+
+            if (rs.next()) {
+                // Игрок уже существует
+                return;
             }
-            ps = connection.prepareStatement("INSERT INTO player (uuid, name, rating) VALUES (?,?,?)");
-            ps.setString(1, player.getPlayer().getUniqueId().toString());
-            ps.setString(2, player.getPlayer().getName());
-            ps.setString(3, "COALESCE(" +
-                    "        (SELECT MAX(ваш_столбец) FROM ваша_таблица) + 1," +
-                    "        1" +
-                    "    )");
-            ps.executeUpdate();
+
+            // Получаем максимальный рейтинг
+            Statement maxRatingStmt = connection.createStatement();
+            ResultSet maxRatingRs = maxRatingStmt.executeQuery(
+                    "SELECT COALESCE(MAX(rating), 0) + 1 AS next_rating FROM player");
+            int nextRating = maxRatingRs.next() ? maxRatingRs.getInt("next_rating") : 1;
+
+            // Добавляем нового игрока
+            PreparedStatement insertStmt = connection.prepareStatement(
+                    "INSERT INTO player (uuid, name, rating) VALUES (?, ?, ?)");
+            insertStmt.setString(1, event.getPlayer().getUniqueId().toString());
+            insertStmt.setString(2, event.getPlayer().getName());
+            insertStmt.setInt(3, nextRating);
+            insertStmt.executeUpdate();
+
+            // Создаем записи в связанных таблицах
+            PreparedStatement cryptoStmt = connection.prepareStatement(
+                    "INSERT INTO cryptoPlayer (uuid) VALUES (?)");
+            cryptoStmt.setString(1, event.getPlayer().getUniqueId().toString());
+            cryptoStmt.executeUpdate();
+
+            // Аналогично для других таблиц...
+
+        } finally {
             closeConnection();
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
         }
+    }
 
-        closeConnection();
 
 
+    private static boolean tableExists(Connection conn, String tableName) throws SQLException {
+        try (ResultSet rs = conn.getMetaData().getTables(null, null, tableName, null)) {
+            return rs.next();
+        }
+    }
+
+
+    public ResultSet executeQuery(String sql) throws SQLException {
+        getConnection();
+        statement = connection.createStatement();
+        resultSet = statement.executeQuery(sql);
+        // Не закрываем соединение здесь - его нужно закрыть после работы с ResultSet
+        return resultSet;
     }
 
 
