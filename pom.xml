@@ -87,6 +87,7 @@
             <url>https://repo.codemc.io/repository/maven-public/</url>
             <layout>default</layout>
         </repository>
+
     </repositories>
 
     <dependencies>
@@ -112,5 +113,6 @@
             <version>2.15.0</version>
             <scope>provided</scope>
         </dependency>
+
     </dependencies>
 </project>

@@ -15,6 +15,8 @@ public class InventoryListener implements Listener {
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
         ItemStack clicked = event.getCurrentItem();
+
+
         if (clicked == null) return;
         if (clicked == null || clicked.getType() == Material.AIR) return;
 
@@ -26,9 +28,11 @@ public class InventoryListener implements Listener {
             String buttonId = nbt.getString("buttonId");
             Player player = (Player) event.getWhoClicked();
             switch (buttonId) {
+                case "back_to_home":
+                    open_home(player);
+                    break;
                 case "open_shop":
-                    player.sendMessage("§aОткрываем магазин...");
-                    // Дополнительная логика
+                    open_shop(player);
                     break;
                 case "close_shop":
                     player.closeInventory();
@@ -70,7 +74,8 @@ public class InventoryListener implements Listener {
 
     }
 
-
+    void open_home(Player player) {customInventory.openHomeMenu(player);}
+    void open_shop(Player player) {customInventory.openShop(player);}
     void coinShop(Player player){
         customInventory.openCoinShop(player);
     }

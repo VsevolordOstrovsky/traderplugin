@@ -5,19 +5,20 @@ import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
-import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
+
 import java.util.Arrays;
-import java.util.Collections;
+
 
 public class CustomInventory {
 
 
     public static void openHomeMenu(Player player) {
+        String title = "Главное меню";
         // Создаем инвентарь с 27 слотами (3 ряда) и названием
-        Inventory inv = Bukkit.createInventory(null, 18, "Главное меню");
+        Inventory inv = Bukkit.createInventory(null, 18, title);
 
 
 
@@ -41,7 +42,9 @@ public class CustomInventory {
         inv.setItem(13, close);
         inv.setItem(17, info);
 
-        fillInventory(inv);
+       fillInventory(inv, title);
+
+
 
 
         // Открываем инвентарь игроку
@@ -49,42 +52,63 @@ public class CustomInventory {
     }
 
     public static void openCoinShop(Player player) {
-        // Создаем инвентарь с 27 слотами (3 ряда) и названием
-        Inventory inv = Bukkit.createInventory(null, 18, "Покупка криптовалют");
+        String title = "Покупка криптовалют";
+        Inventory inv = Bukkit.createInventory(null, 18, title);
+
+        ItemStack back = createButton(Material.FILLED_MAP, "back_to_home",
+                "§aНазад", "§7При переходе назад данные не сохраняются");
 
         ItemStack close = createButton(Material.BARRIER, "close_shop",
                 "§aЗакрыть инвентарь", "§7Нажмите для закрытия");
 
+
+        inv.setItem(9, back);
         inv.setItem(13, close);
-        fillInventory(inv);
+
+        fillInventory(inv, title);
 
         // Открываем инвентарь игроку
         player.openInventory(inv);
     }
 
     public static void openWallet(Player player) {
+
+        String title = "Кошелёк";
         // Создаем инвентарь с 27 слотами (3 ряда) и названием
-        Inventory inv = Bukkit.createInventory(null, 18, "Кошелёк");
+        Inventory inv = Bukkit.createInventory(null, 18, title);
+
+        ItemStack back = createButton(Material.FILLED_MAP, "back_to_home",
+                "§aНазад", "§7При переходе назад данные не сохраняются");
 
         ItemStack close = createButton(Material.BARRIER, "close_shop",
                 "§aЗакрыть инвентарь", "§7Нажмите для закрытия");
 
+        inv.setItem(9, back);
         inv.setItem(13, close);
-        fillInventory(inv);
+        fillInventory(inv, title);
 
         // Открываем инвентарь игроку
         player.openInventory(inv);
     }
 
     public static void openShop(Player player) {
+
+        String title = "Магазин";
+
         // Создаем инвентарь с 27 слотами (3 ряда) и названием
-        Inventory inv = Bukkit.createInventory(null, 18, "Магазин");
+        Inventory inv = Bukkit.createInventory(null, 18, title);
+
+        ItemStack back = createButton(Material.FILLED_MAP, "back_to_home",
+                "§aНазад", "§7При переходе назад данные не сохраняются");
 
         ItemStack close = createButton(Material.BARRIER, "close_shop",
                 "§aЗакрыть инвентарь", "§7Нажмите для закрытия");
 
+
+        inv.setItem(9, back);
         inv.setItem(13, close);
-        fillInventory(inv);
+
+        fillInventory(inv, title);
 
         // Открываем инвентарь игроку
         player.openInventory(inv);
@@ -104,24 +128,25 @@ public class CustomInventory {
         return nbtItem.getItem();
     }
 
-    public static ItemStack createFillItem() {
-        // Используем KNOWLEDGE_BOOK (книга знаний) - единственный полностью невидимый предмет
-        ItemStack item = new ItemStack(Material.KNOWLEDGE_BOOK);
-        ItemMeta meta = item.getItemMeta();
-        meta.setDisplayName(" ");
-        meta.setLore(Collections.emptyList());
+    public static ItemStack createFillItem(String inventoryTitle) {
+        ItemStack item = new ItemStack(Material.LIGHT_GRAY_STAINED_GLASS_PANE);
 
-        // Добавляем NBT-тег для идентификации
+        // Сначала NBT
         NBTItem nbtItem = new NBTItem(item);
         nbtItem.setBoolean("immovable", true);
         item = nbtItem.getItem();
+
+        // Потом ItemMeta и флаги
+        ItemMeta meta = item.getItemMeta();
+        meta.setDisplayName(inventoryTitle); // Устанавливаем пустое название
+        item.setItemMeta(meta);
 
         return item;
     }
 
 
-    private static void fillInventory(Inventory inv) {
-        ItemStack filler = createFillItem(Material.LIGHT_GRAY_STAINED_GLASS_PANE);
+    private static void fillInventory(Inventory inv, String inventoryTitle) {
+        ItemStack filler = createFillItem(inventoryTitle);
 
         // Перебираем все слоты инвентаря
         for (int slot = 0; slot < inv.getSize(); slot++) {
