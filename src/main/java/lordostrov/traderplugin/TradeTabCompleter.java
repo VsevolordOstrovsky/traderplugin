@@ -16,7 +16,7 @@ public class TradeTabCompleter implements TabCompleter {
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         List<String> completions = new ArrayList<>();
 
-        if (command.getName().equalsIgnoreCase("buy")) {
+        if (command.getName().equalsIgnoreCase("infoCoin")) {
             if (args.length == 1) {
                 // Фильтруем варианты по введенному тексту
                 for (String pair : TRADE_PAIRS) {

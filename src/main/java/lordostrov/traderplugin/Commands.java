@@ -28,7 +28,7 @@ public class Commands implements CommandExecutor {
         if (command.getName().equalsIgnoreCase("infoCoin")) {
             ManageCoin manageCoin = new ManageCoin(strings[0], category);
             if (strings.length == 0) {
-                commandSender.sendMessage("Использование: /trade <ETHUSDT|BTCUSDT>");
+                commandSender.sendMessage("Использование: /infoCoin <ETHUSDT|BTCUSDT|SOLUSDT|XRPUSDT>");
                 return true;
             }
 

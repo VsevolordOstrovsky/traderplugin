@@ -8,13 +8,13 @@ public class Manager {
 
 
 
-    Connection connection;
+    private Connection connection;
     Statement statement;
     ResultSet resultSet;
 
     String req = "";
 
-    public void getConnection() {
+    private void getConnection() {
 
 //        // Указываем путь к БД (если файла нет, он будет создан)
         String url = "jdbc:sqlite:theGame.db";
@@ -55,62 +55,73 @@ public class Manager {
     }
 
     private static void createTablePlayer(Connection conn) throws SQLException {
-        String sql = "CREATE TABLE player(\n" +
-                "  uuid text not null primary key,\n" +
-                "  name text not null,\n" +
-                "    usdt TEXT default '0',\n" +
-                "    rating int primary key\n" +
-                ")";
+        String sql = "CREATE TABLE player(" +
+                "    uuid TEXT NOT NULL PRIMARY KEY," +
+                "    name TEXT NOT NULL," +
+                "    usdt TEXT DEFAULT '0'," +
+                "    rating INTEGER NOT NULL UNIQUE" +
+                ");";
 
         try (Statement stmt = conn.createStatement()) {
             stmt.execute(sql);
-            System.out.println("Таблица создана или уже существует");
+            System.out.println("Таблица [player] создана или уже существует");
         }
     }
 
     private static void createTableCryptoPlayer(Connection conn) throws SQLException {
-        String sql = "CREATE TABLE cryptoPlayer(\n" +
-                "    uuid text not null primary key,\n" +
-                "    BTC int default 0,\n" +
-                "    ETH int default 0,\n" +
-                "    SOL int default 0,\n" +
-                "    XRP int default 0,\n" +
-                "    foreign key (uuid) references player(uuid)\n" +
-                "\n" +
-                ")";
+        String sql = "CREATE TABLE cryptoPlayer(" +
+                "    uuid TEXT NOT NULL PRIMARY KEY," +
+                "    BTC INTEGER DEFAULT 0," +
+                "    ETH INTEGER DEFAULT 0," +
+                "    SOL INTEGER DEFAULT 0," +
+                "    XRP INTEGER DEFAULT 0," +
+                "    FOREIGN KEY (uuid) REFERENCES player(uuid)" +
+                ");";
 
         try (Statement stmt = conn.createStatement()) {
             stmt.execute(sql);
-            System.out.println("Таблица создана или уже существует");
+            System.out.println("Таблица [cryptoPlayer] создана или уже существует");
         }
     }
 
     private static void createTableMarketPlayer(Connection conn) throws SQLException {
-        String sql = "CREATE TABLE marketPlayer(\n" +
-                "  uuid text not null primary key,\n" +
-                "    foreign key (uuid) references player(uuid)\n" +
-                ")";
+        String sql = "CREATE TABLE marketPlayer(" +
+                "    uuid TEXT NOT NULL PRIMARY KEY," +
+                "    material TEXT NOT NULL," +
+                "    quantity int not null" +
+                "    FOREIGN KEY (uuid) REFERENCES player(uuid)" +
+                ");";
 
         try (Statement stmt = conn.createStatement()) {
             stmt.execute(sql);
-            System.out.println("Таблица создана или уже существует");
+            System.out.println("Таблица [marketPlayer] создана или уже существует");
         }
     }
 
     private static void createTableRating(Connection conn) throws SQLException {
-        String sql = "CREATE TABLE rating(\n" +
-                "    rating int not null,\n" +
-                "    uuid text not null,\n" +
-                "    usdt text,\n" +
-                "    foreign key (uuid) references player(uuid),\n" +
-                "    foreign key (usdt) references player(usdt)\n" +
-                "    foreign key (rating) references player(rating)\n" +
-                ")";
+        String sql = "CREATE TABLE rating(" +
+                "    rating INTEGER NOT NULL," +
+                "    uuid TEXT NOT NULL," +
+                "    usdt TEXT NOT null ," +
+                "    FOREIGN KEY (uuid) REFERENCES player(uuid)," +
+                "    FOREIGN KEY (rating) REFERENCES player(rating)" +
+                "    FOREIGN KEY (usdt) REFERENCES player(usdt)" +
+                ");";
 
         try (Statement stmt = conn.createStatement()) {
             stmt.execute(sql);
-            System.out.println("Таблица создана или уже существует");
+            System.out.println("Таблица [rating] создана или уже существует");
         }
+    }
+
+    public void createTables() throws SQLException {
+        getConnection();
+        createTablePlayer(connection);
+        createTableCryptoPlayer(connection);
+        createTableMarketPlayer(connection);
+        createTableRating(connection);
+        closeConnection();
+
     }
 
     public void addInTablePlayer(PlayerJoinEvent player){
@@ -126,9 +137,13 @@ public class Manager {
                     return;
                 }
             }
-            ps = connection.prepareStatement("INSERT INTO player (uuid, username) VALUES (?,?)");
+            ps = connection.prepareStatement("INSERT INTO player (uuid, name, rating) VALUES (?,?,?)");
             ps.setString(1, player.getPlayer().getUniqueId().toString());
             ps.setString(2, player.getPlayer().getName());
+            ps.setString(3, "COALESCE(" +
+                    "        (SELECT MAX(ваш_столбец) FROM ваша_таблица) + 1," +
+                    "        1" +
+                    "    )");
             ps.executeUpdate();
             closeConnection();
         } catch (SQLException e) {
