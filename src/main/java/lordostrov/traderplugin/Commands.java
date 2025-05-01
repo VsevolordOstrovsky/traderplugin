@@ -1,7 +1,10 @@
-package lordostrov.traderplugin.coins;
+package lordostrov.traderplugin;
 
 
 
+import lordostrov.traderplugin.coins.ManageCoin;
+import lordostrov.traderplugin.coins.ParseResponse;
+import lordostrov.traderplugin.menu.CustomInventory;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -14,6 +17,7 @@ public class Commands implements CommandExecutor {
 
     private final String category = "spot";
     private final String symbol = "ETHUSDT";
+    private CustomInventory customInventory = new CustomInventory();
 
 
 
@@ -21,7 +25,7 @@ public class Commands implements CommandExecutor {
     public boolean onCommand(CommandSender commandSender, Command command, String s, String[] strings) {
 
 
-        if (command.getName().equalsIgnoreCase("buy")) {
+        if (command.getName().equalsIgnoreCase("infoCoin")) {
             ManageCoin manageCoin = new ManageCoin(strings[0], category);
             if (strings.length == 0) {
                 commandSender.sendMessage("Использование: /trade <ETHUSDT|BTCUSDT>");
@@ -76,6 +80,7 @@ public class Commands implements CommandExecutor {
 
             Player player = (Player) commandSender;
 
+            customInventory.openHomeMenu(player);
 
             return true;
         }

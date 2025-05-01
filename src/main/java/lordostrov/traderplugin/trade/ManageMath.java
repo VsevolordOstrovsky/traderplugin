@@ -1,4 +1,4 @@
-package trade;
+package lordostrov.traderplugin.trade;
 
 public class ManageMath {
 
