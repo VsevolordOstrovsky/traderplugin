@@ -11,6 +11,7 @@ import org.bukkit.inventory.ItemStack;
 
 public class InventoryListener implements Listener {
     CustomInventory customInventory = new CustomInventory();
+    SellMenu sellMenu = new SellMenu();
 
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
@@ -28,6 +29,7 @@ public class InventoryListener implements Listener {
             String buttonId = nbt.getString("buttonId");
             Player player = (Player) event.getWhoClicked();
             switch (buttonId) {
+                /*---HomeMenu---*/
                 case "back_to_home":
                     open_home(player);
                     break;
@@ -46,11 +48,22 @@ public class InventoryListener implements Listener {
                 case "info":
                     info(player);
                     break;
+                /*------------*/
 
-                case "filler":
-
+                /*---SellMenu---*/
+                case "buy_market_menu":
+                    openBuyMenu(player);
+                    break;
+                case "sell_market_menu":
+                    openSellMenu(player);
+                    break;
+                case "my_lots_market_menu":
+                    openMyItemMenu(player);
                     break;
 
+
+
+                /*--------------*/
                 case "teleport_spawn":
                     player.teleport(player.getWorld().getSpawnLocation());
                     player.sendMessage("§eВы телепортированы на спавн!");
@@ -74,6 +87,8 @@ public class InventoryListener implements Listener {
 
     }
 
+
+    /*---HomeMenu---*/
     void open_home(Player player) {customInventory.openHomeMenu(player);}
     void open_shop(Player player) {customInventory.openShop(player);}
     void coinShop(Player player){
@@ -85,4 +100,11 @@ public class InventoryListener implements Listener {
     void info(Player player){
         player.sendMessage("Будет открыта информация");
     }
+    /*------------*/
+
+    /*---SellMenu---*/
+    void openBuyMenu(Player player){sellMenu.openBuyMenu(player);}
+    void openSellMenu(Player player){sellMenu.openSellMenu(player);}
+    void openMyItemMenu(Player player){sellMenu.openMyItemMenu(player);}
+
 }

@@ -100,11 +100,14 @@ public class Commands implements CommandExecutor {
             ResultSet rs = null;
             try {
                 rs = manager.executeQuery("SELECT * FROM player");
-                System.out.println("Содержимое таблицы player:");
-                System.out.println("----------------------------------------");
-                System.out.printf("| %-36s | %-16s | %-10s | %-6s |%n",
-                        "UUID", "Name", "USDT", "Rating");
-                System.out.println("----------------------------------------");
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
+            }
+
+            try {
+                // Заголовок таблицы
+                System.out.printf("%-36s %-20s %-10s %-10s%n", "UUID", "Name", "USDT", "Rating");
+                System.out.println("-------------------------------------------------------------");
 
                 while (rs.next()) {
                     String uuid = rs.getString("uuid");
@@ -112,22 +115,23 @@ public class Commands implements CommandExecutor {
                     String usdt = rs.getString("usdt");
                     int rating = rs.getInt("rating");
 
-                    System.out.printf("| %-36s | %-16s | %-10s | %-6d |%n",
-                            uuid, name, usdt, rating);
+                    // Выводим данные в формате таблицы
+                    System.out.printf("%-36s %-20s %-10s %-10d%n", uuid, name, usdt, rating);
                 }
-                System.out.println("----------------------------------------");
             } catch (SQLException e) {
                 throw new RuntimeException(e);
             } finally {
-                if (rs != null) {
-                    try {
-                        rs.close();
-                    } catch (SQLException e) {
-                        e.printStackTrace();
+                // Важно закрыть ResultSet и соединение после использования
+                try {
+                    if (rs != null) {
+                        rs.close(); // Закрываем ResultSet
                     }
+                } catch (SQLException e) {
+                    throw new RuntimeException(e);
                 }
                 manager.closeConnection();
             }
+
 
         }
 

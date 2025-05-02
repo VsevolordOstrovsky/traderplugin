@@ -98,13 +98,26 @@ public class CustomInventory {
         // Создаем инвентарь с 27 слотами (3 ряда) и названием
         Inventory inv = Bukkit.createInventory(null, 18, title);
 
+
+        ItemStack buy = createButton(Material.GOLD_INGOT, "buy_market_menu",
+                "§aРынок", "§7Нажмите для перехода");
+
+        ItemStack my_lots = createButton(Material.BOOKSHELF, "my_lots_market_menu",
+                "§aМои лоты", "§7Нажмите для перехода");
+
+        ItemStack sell = createButton(Material.EMERALD, "sell_market_menu",
+                "§aВыставить предметы на продажу", "§7Нажмите для перехода");
+
+
         ItemStack back = createButton(Material.FILLED_MAP, "back_to_home",
                 "§aНазад", "§7При переходе назад данные не сохраняются");
 
         ItemStack close = createButton(Material.BARRIER, "close_shop",
                 "§aЗакрыть инвентарь", "§7Нажмите для закрытия");
 
-
+        inv.setItem(3, buy);
+        inv.setItem(4, sell);
+        inv.setItem(5, my_lots);
         inv.setItem(9, back);
         inv.setItem(13, close);
 
@@ -128,7 +141,7 @@ public class CustomInventory {
         return nbtItem.getItem();
     }
 
-    public static ItemStack createFillItem(String inventoryTitle) {
+    private static ItemStack createFillItem(String inventoryTitle) {
         ItemStack item = new ItemStack(Material.LIGHT_GRAY_STAINED_GLASS_PANE);
 
         // Сначала NBT
@@ -145,7 +158,7 @@ public class CustomInventory {
     }
 
 
-    private static void fillInventory(Inventory inv, String inventoryTitle) {
+    public static void fillInventory(Inventory inv, String inventoryTitle) {
         ItemStack filler = createFillItem(inventoryTitle);
 
         // Перебираем все слоты инвентаря
