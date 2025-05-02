@@ -142,7 +142,7 @@ public class CustomInventory {
     }
 
     private static ItemStack createFillItem(String inventoryTitle) {
-        ItemStack item = new ItemStack(Material.LIGHT_GRAY_STAINED_GLASS_PANE);
+        ItemStack item = new ItemStack(Material.GRAY_STAINED_GLASS_PANE);
 
         // Сначала NBT
         NBTItem nbtItem = new NBTItem(item);

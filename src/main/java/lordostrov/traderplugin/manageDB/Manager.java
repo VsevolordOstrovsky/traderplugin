@@ -115,6 +115,7 @@ public class Manager {
                 "    uuid TEXT NOT NULL PRIMARY KEY," +
                 "    material TEXT NOT NULL," +
                 "    quantity int not null," +
+                "    cost int not null," +
                 "    FOREIGN KEY (uuid) REFERENCES player(uuid)" +
                 ");";
 
