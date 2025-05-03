@@ -111,8 +111,9 @@ public class Manager {
             return;
         }
 
+
         String sql = "CREATE TABLE IF NOT EXISTS marketPlayer(" +
-                "    uuid TEXT NOT NULL PRIMARY KEY," +
+                "    uuid TEXT NOT NULL," +
                 "    material TEXT NOT NULL," +
                 "    quantity int not null," +
                 "    cost int not null," +
@@ -147,6 +148,8 @@ public class Manager {
 
     public void createTables() throws SQLException {
         getConnection();
+        // Не забыть удалить строку после отладки!!!
+        dropTable("marketPlayer");
         createTablePlayer(connection);
         createTableCryptoPlayer(connection);
         createTableMarketPlayer(connection);
@@ -211,6 +214,86 @@ public class Manager {
         resultSet = statement.executeQuery(sql);
         // Не закрываем соединение здесь - его нужно закрыть после работы с ResultSet
         return resultSet;
+    }
+
+//    public boolean insertOrUpdateMarketPlayer(String uuid, String material, int quantity, int cost) {
+//        getConnection();
+//        try {
+//            String sql = "INSERT INTO marketPlayer(uuid, material, quantity, cost) VALUES(?,?,?,?) " +
+//                    "ON CONFLICT(uuid) DO UPDATE SET " +
+//                    "material = excluded.material, " +
+//                    "quantity = excluded.quantity, " +
+//                    "cost = excluded.cost";
+//
+//            try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+//                pstmt.setString(1, uuid);
+//                pstmt.setString(2, material);
+//                pstmt.setInt(3, quantity);
+//                pstmt.setInt(4, cost);
+//
+//                int affectedRows = pstmt.executeUpdate();
+//                return affectedRows > 0;
+//            }
+//        } catch (SQLException e) {
+//            if (e.getMessage().contains("FOREIGN KEY constraint failed")) {
+//                System.err.println("Ошибка: игрок с UUID " + uuid + " не существует в таблице player");
+//            } else {
+//                System.err.println("SQL ошибка при работе с marketPlayer: " + e.getMessage());
+//            }
+//            return false;
+//        } finally {
+//            closeConnection();
+//        }
+//    }
+
+    public boolean insertMarketPlayer(String uuid, String material, int quantity, int cost) {
+        getConnection();
+        try {
+            String sql = "INSERT INTO marketPlayer(uuid, material, quantity, cost) VALUES(?,?,?,?)";
+
+            try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+                pstmt.setString(1, uuid);
+                pstmt.setString(2, material);
+                pstmt.setInt(3, quantity);
+                pstmt.setInt(4, cost);
+
+                int affectedRows = pstmt.executeUpdate();
+                return affectedRows > 0;
+            }
+        } catch (SQLException e) {
+            if (e.getMessage().contains("FOREIGN KEY constraint failed")) {
+                System.err.println("Ошибка: игрок с UUID " + uuid + " не существует в таблице player");
+            } else if (e.getMessage().contains("UNIQUE constraint failed")) {
+                System.err.println("Ошибка: запись с UUID " + uuid + " уже существует");
+            } else {
+                System.err.println("SQL ошибка при добавлении в marketPlayer: " + e.getMessage());
+            }
+            return false;
+        } finally {
+            closeConnection();
+        }
+    }
+    public boolean dropTable(String tableName) {
+
+        try {
+            // Проверяем существование таблицы перед удалением
+            if (!tableExists(connection, tableName)) {
+                System.out.println("Таблица " + tableName + " не существует, удаление не требуется");
+                return true;
+            }
+
+            String sql = "DROP TABLE IF EXISTS " + tableName;
+            try (Statement stmt = connection.createStatement()) {
+                stmt.execute(sql);
+                System.out.println("Таблица " + tableName + " успешно удалена");
+                return true;
+            }
+        } catch (SQLException e) {
+            System.err.println("Ошибка при удалении таблицы " + tableName + ": " + e.getMessage());
+            return false;
+        } finally {
+
+        }
     }
 
 

@@ -99,26 +99,30 @@ public class Commands implements CommandExecutor {
 
             ResultSet rs = null;
             try {
-                rs = manager.executeQuery("SELECT * FROM player");
+                rs = manager.executeQuery("SELECT * FROM marketPlayer");
             } catch (SQLException e) {
                 throw new RuntimeException(e);
             }
 
             try {
                 // Заголовок таблицы
-                System.out.printf("%-36s %-20s %-10s %-10s%n", "UUID", "Name", "USDT", "Rating");
-                System.out.println("-------------------------------------------------------------");
+                System.out.println("Данные из таблицы marketPlayer:");
+                System.out.println("----------------------------------");
+                System.out.printf("%-36s | %-20s | %-8s | %-10s%n",
+                        "UUID", "Material", "Quantity", "Cost");
+                System.out.println("----------------------------------");
 
                 while (rs.next()) {
                     String uuid = rs.getString("uuid");
-                    String name = rs.getString("name");
-                    String usdt = rs.getString("usdt");
-                    int rating = rs.getInt("rating");
+                    String material = rs.getString("material");
+                    int quantity = rs.getInt("quantity");
+                    int cost = rs.getInt("cost");
 
-                    // Выводим данные в формате таблицы
-                    System.out.printf("%-36s %-20s %-10s %-10d%n", uuid, name, usdt, rating);
+                    System.out.printf("%-36s | %-20s | %-8d | %-10d%n",
+                            uuid, material, quantity, cost);
                 }
-            } catch (SQLException e) {
+
+            }catch (SQLException e) {
                 throw new RuntimeException(e);
             } finally {
                 // Важно закрыть ResultSet и соединение после использования

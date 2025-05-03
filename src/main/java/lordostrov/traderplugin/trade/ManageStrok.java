@@ -1,6 +1,9 @@
 package lordostrov.traderplugin.trade;
 
-public class ManageMath {
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+public class ManageStrok {
 
     public static String addStringFloats(String a, String b) {
         // Проверка на пустые строки
@@ -81,5 +84,21 @@ public class ManageMath {
         }
         return s;
     }
+
+    public static int extractPrice(String input) {
+        // Удаляем все не-цифры, кроме минуса (если нужны отрицательные цены)
+        String numericString = input.replaceAll("[^0-9]", "").trim();
+
+        if (!numericString.isEmpty()) {
+            try {
+                return Integer.parseInt(numericString);
+            } catch (NumberFormatException e) {
+                System.err.println("Ошибка при преобразовании числа: " + e.getMessage());
+                return 0; // или другое значение по умолчанию
+            }
+        }
+        return 0; // если цена не найдена
+    }
+
 
 }

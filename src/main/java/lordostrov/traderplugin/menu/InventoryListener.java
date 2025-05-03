@@ -1,7 +1,10 @@
 package lordostrov.traderplugin.menu;
 import lordostrov.traderplugin.manageDB.Manager;
 import lordostrov.traderplugin.trade.ManageInventory;
+import lordostrov.traderplugin.trade.ManageStrok;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
+import org.bukkit.Color;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -11,11 +14,13 @@ import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
 import de.tr7zw.nbtapi.NBTItem;
 import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.InventoryView;
 import org.bukkit.inventory.ItemStack;
 
 import java.lang.reflect.Type;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 
 public class InventoryListener implements Listener {
@@ -24,6 +29,7 @@ public class InventoryListener implements Listener {
     HashMap<Player, Long> currentNumbers = sellMenu.getCurrentNumbers();
     ManageInventory manageInventory = new ManageInventory();
     Manager managerBD = new Manager();
+    ManageStrok manageStrok = new ManageStrok();
 
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
@@ -54,7 +60,7 @@ public class InventoryListener implements Listener {
                     open_shop(player);
                     break;
                 case "close_shop":
-                    player.closeInventory();
+                    closeInventory(player);
                     break;
                 case "coinShop":
                     coinShop(player);
@@ -82,7 +88,7 @@ public class InventoryListener implements Listener {
                     break;
                 // сделать push_item button
                 case "push_item":
-                    pushItemToMarket(event.getInventory());
+                    pushItemToMarket(player, event.getInventory());
                     break;
 
 
@@ -135,6 +141,10 @@ public class InventoryListener implements Listener {
     void openBuyMenu(Player player){sellMenu.openBuyMenu(player);}
     void openSellMenu(Player player){sellMenu.openSellMenu(player);}
     void openMyItemMenu(Player player){sellMenu.openMyItemMenu(player);}
+    void closeInventory(Player player){
+        manageInventory.deleteCloseButton(player);
+        player.closeInventory();
+    }
 
     private void handleBannerClick(Player player, String buttonId, Inventory inv) {
 
@@ -179,12 +189,39 @@ public class InventoryListener implements Listener {
         player.openInventory(newInv);
     }
 
-    private void pushItemToMarket(Inventory inventory){
+    private void pushItemToMarket(Player player, Inventory inventory){
         Map<Material, Integer> mapItem = manageInventory.getItemsToMarket(inventory);
         Map.Entry<Material, Integer> entry = mapItem.entrySet().iterator().next();
         Material key = entry.getKey();
         Integer value = entry.getValue();
+        if(value == -1 && key == Material.BARRIER){
+            player.sendMessage(ChatColor.RED + "Вы пытаетесь продать разные предметы!!!");
+            return;
+        }
+        if(value == 0){
+            player.sendMessage(ChatColor.RED + "Вы не положили предметы!!!");
+            return;
+        }
+
         // Далеее отправляем в бд
+        // Получаем открытый инвентарь
+        InventoryView openInventory = player.getOpenInventory();
+
+        // Получаем верхнюю часть инвентаря (обычно это название меню)
+        Inventory topInventory = openInventory.getTopInventory();
+
+        // Получаем название инвентаря
+
+        String inventoryTitle = openInventory.getTitle();
+        if(!inventoryTitle.equals("На продажу") ){
+            int cost = manageStrok.extractPrice(inventoryTitle);
+            String uuid = player.getUniqueId().toString();
+            managerBD.insertMarketPlayer(uuid, String.valueOf(key), value, cost);
+
+        }
+
+
+
     }
 
 }

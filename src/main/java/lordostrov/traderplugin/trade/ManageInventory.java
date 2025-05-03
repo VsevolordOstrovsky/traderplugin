@@ -1,5 +1,6 @@
 package lordostrov.traderplugin.trade;
 
+import de.tr7zw.nbtapi.NBTItem;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
@@ -37,6 +38,22 @@ public class ManageInventory {
         }
 
         return inventoryMap;
+    }
+
+    public void deleteCloseButton(Player player) {
+        Inventory inventory = player.getInventory();
+
+        for (ItemStack item : inventory.getContents()) {
+            if (item == null || item.getType() != Material.BARRIER) {
+                continue; // Пропускаем пустые слоты и небарьеры
+            }
+
+            // Проверяем NBT-тег
+            NBTItem nbt = new NBTItem(item);
+            if (nbt.hasKey("buttonId") && nbt.getString("buttonId").equals("close_shop")) {
+                inventory.remove(item); // Удаляем только кнопку close_shop
+            }
+        }
     }
 
     public void sellItems(Player player, Material material, int amount) {
