@@ -96,31 +96,84 @@ public class Commands implements CommandExecutor {
         }
 
         if (command.getName().equalsIgnoreCase("request")) {
+            String tableName = strings[0];
 
             ResultSet rs = null;
             try {
-                rs = manager.executeQuery("SELECT * FROM marketPlayer");
+                rs = manager.executeQuery("SELECT * FROM "+tableName);
             } catch (SQLException e) {
                 throw new RuntimeException(e);
             }
 
             try {
-                // Заголовок таблицы
-                System.out.println("Данные из таблицы marketPlayer:");
-                System.out.println("----------------------------------");
-                System.out.printf("%-36s | %-20s | %-8s | %-10s%n",
-                        "UUID", "Material", "Quantity", "Cost");
-                System.out.println("----------------------------------");
+                switch (tableName) {
+                    case "marketPlayer":
+                        // Заголовок таблицы
+                        System.out.println("Данные из таблицы marketPlayer:");
+                        System.out.println("----------------------------------");
+                        System.out.printf("%-36s | %-20s | %-8s | %-10s%n",
+                                "UUID", "Material", "Quantity", "Cost");
+                        System.out.println("----------------------------------");
 
-                while (rs.next()) {
-                    String uuid = rs.getString("uuid");
-                    String material = rs.getString("material");
-                    int quantity = rs.getInt("quantity");
-                    int cost = rs.getInt("cost");
+                        while (rs.next()) {
+                            String uuid = rs.getString("uuid");
+                            String material = rs.getString("material");
+                            int quantity = rs.getInt("quantity");
+                            int cost = rs.getInt("cost");
 
-                    System.out.printf("%-36s | %-20s | %-8d | %-10d%n",
-                            uuid, material, quantity, cost);
+                            System.out.printf("%-36s | %-20s | %-8d | %-10d%n",
+                                    uuid, material, quantity, cost);
+                        }
+                        break;
+                    case "player":
+                        // Заголовок таблицы
+                        System.out.println("Данные из таблицы player:");
+                        System.out.printf("%-36s %-20s %-10s %-10s%n", "UUID", "Name", "USDT", "Rating");
+                        System.out.println("-------------------------------------------------------------");
+                        while (rs.next()) {
+                            String uuid = rs.getString("uuid");
+                            String name = rs.getString("name");
+                            String usdt = rs.getString("usdt");
+                            int rating = rs.getInt("rating");
+
+                            // Выводим данные в формате таблицы
+                            System.out.printf("%-36s %-20s %-10s %-10d%n", uuid, name, usdt, rating);
+                        }
+                        break;
+                    case "cryptoPlayer":
+                        // Заголовок таблицы
+                        System.out.println("Данные из таблицы cryptoPlayer:");
+                        System.out.printf("%-36s %-20s %-10s %-10s %-10s%n", "UUID", "BTC", "ETH", "SOL", "XRP");
+                        System.out.println("-------------------------------------------------------------");
+                        while (rs.next()) {
+                            String uuid = rs.getString("uuid");
+                            int BTC = rs.getInt("BTC");
+                            int ETH = rs.getInt("ETH");
+                            int SOL = rs.getInt("SOL");
+                            int XRP = rs.getInt("XRP");
+
+                            // Выводим данные в формате таблицы
+                            System.out.printf("%-36s %-20s %-10s %-10s %-10s%n", uuid, BTC, ETH, SOL, XRP);
+                        }
+                        break;
+                    case "rating":
+                        // Заголовок таблицы
+                        System.out.println("Данные из таблицы rating:");
+                        System.out.printf("%-10s %-36s %-10s%n", "rating", "UUID", "USDT");
+                        System.out.println("-------------------------------------------------------------");
+                        while (rs.next()) {
+                            int rating = rs.getInt("rating");
+                            String uuid = rs.getString("uuid");
+                            String usdt = rs.getString("usdt");
+
+
+                            // Выводим данные в формате таблицы
+                            System.out.printf("%-10s %-36s %-10s%n", rating, uuid, usdt);
+                        }
+                        break;
+
                 }
+
 
             }catch (SQLException e) {
                 throw new RuntimeException(e);

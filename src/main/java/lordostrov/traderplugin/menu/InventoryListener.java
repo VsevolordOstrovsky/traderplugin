@@ -194,6 +194,25 @@ public class InventoryListener implements Listener {
         Map.Entry<Material, Integer> entry = mapItem.entrySet().iterator().next();
         Material key = entry.getKey();
         Integer value = entry.getValue();
+
+        // Получаем открытый инвентарь
+        InventoryView openInventory = player.getOpenInventory();
+
+        // Получаем верхнюю часть инвентаря (обычно это название меню)
+        Inventory topInventory = openInventory.getTopInventory();
+
+        // Получаем название инвентаря
+
+        String inventoryTitle = openInventory.getTitle();
+
+        int cost = manageStrok.extractPrice(inventoryTitle);
+        String uuid = player.getUniqueId().toString();
+
+        if(managerBD.countRecordsByUuid(uuid) >= 5){
+            player.sendMessage(ChatColor.RED + "Вы можете выстовить не более 5 предложений!!!");
+            return;
+        }
+
         if(value == -1 && key == Material.BARRIER){
             player.sendMessage(ChatColor.RED + "Вы пытаетесь продать разные предметы!!!");
             return;
@@ -204,20 +223,13 @@ public class InventoryListener implements Listener {
         }
 
         // Далеее отправляем в бд
-        // Получаем открытый инвентарь
-        InventoryView openInventory = player.getOpenInventory();
 
-        // Получаем верхнюю часть инвентаря (обычно это название меню)
-        Inventory topInventory = openInventory.getTopInventory();
-
-        // Получаем название инвентаря
-
-        String inventoryTitle = openInventory.getTitle();
         if(!inventoryTitle.equals("На продажу") ){
-            int cost = manageStrok.extractPrice(inventoryTitle);
-            String uuid = player.getUniqueId().toString();
+
             managerBD.insertMarketPlayer(uuid, String.valueOf(key), value, cost);
 
+        }else{
+            player.sendMessage(ChatColor.RED + "Цена не указана!!!");
         }
 
 

@@ -36,6 +36,7 @@ public final class Traderplugin extends JavaPlugin implements Listener {
         this.getCommand("menu").setExecutor(new Commands());
         /*-----------------*/
         this.getCommand("request").setExecutor(new Commands());
+        this.getCommand("request").setTabCompleter(new TradeTabCompleter());
 
         // Создание сайдбара для всех онлайн-игроков
         SidebarManager sidebarManager = new SidebarManager(this);

@@ -20,4 +20,4 @@ commands:
   request:
     description:
       permission:
-      usage: /<command>
+      usage: /<command> <table>

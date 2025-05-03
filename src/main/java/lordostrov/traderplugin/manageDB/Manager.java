@@ -150,6 +150,7 @@ public class Manager {
         getConnection();
         // Не забыть удалить строку после отладки!!!
         dropTable("marketPlayer");
+        dropTable("player");
         createTablePlayer(connection);
         createTableCryptoPlayer(connection);
         createTableMarketPlayer(connection);
@@ -293,6 +294,33 @@ public class Manager {
             return false;
         } finally {
 
+        }
+    }
+
+    /**
+     * Подсчитывает количество записей с указанным UUID в таблице marketPlayer
+     * @param uuid UUID для проверки
+     * @return количество найденных записей (0 если не найдено)
+     */
+    public int countRecordsByUuid(String uuid) {
+        getConnection();
+        try {
+            String sql = "SELECT COUNT(*) AS count FROM marketPlayer WHERE uuid = ?";
+
+            try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+                pstmt.setString(1, uuid);
+                ResultSet rs = pstmt.executeQuery();
+
+                if (rs.next()) {
+                    return rs.getInt("count");
+                }
+                return 0;
+            }
+        } catch (SQLException e) {
+            System.err.println("Ошибка при подсчёте записей для UUID " + uuid + ": " + e.getMessage());
+            return 0;
+        } finally {
+            closeConnection();
         }
     }
 
