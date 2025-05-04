@@ -18,16 +18,6 @@ public class Manager {
 
 //        // Указываем путь к БД (если файла нет, он будет создан)
         String url = "jdbc:sqlite:theGame.db";
-//
-//        try (Connection conn = DriverManager.getConnection(url)) {
-//            if (conn != null) {
-//                System.out.println("Подключение к SQLite установлено!");
-//
-//            }
-//        } catch (SQLException e) {
-//            System.out.println(e.getMessage());
-//        }
-
 
         String text;
         try {
@@ -320,6 +310,33 @@ public class Manager {
             System.err.println("Ошибка при подсчёте записей для UUID " + uuid + ": " + e.getMessage());
             return 0;
         } finally {
+            closeConnection();
+        }
+    }
+
+    /**
+     * Выполняет параметризованный SQL-запрос на обновление данных
+     * @param sql SQL-запрос с параметрами (?)
+     * @param params параметры для подстановки в запрос
+     * @return количество измененных строк или -1 при ошибке
+     */
+    public int executeUpdate(String sql, Object... params) {
+        getConnection();
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+
+            // Устанавливаем параметры
+            for (int i = 0; i < params.length; i++) {
+                pstmt.setObject(i + 1, params[i]);
+            }
+
+            return pstmt.executeUpdate();
+        } catch (SQLException e) {
+            System.err.println("Ошибка при выполнении параметризованного запроса: " + e.getMessage());
+            System.err.println("Запрос: " + sql);
+            e.printStackTrace();
+            return -1;
+        } finally {
+            // Автоматически закрывает PreparedStatement благодаря try-with-resources
             closeConnection();
         }
     }

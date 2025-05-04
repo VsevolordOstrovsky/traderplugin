@@ -105,6 +105,7 @@ public class Commands implements CommandExecutor {
                 throw new RuntimeException(e);
             }
 
+
             try {
                 switch (tableName) {
                     case "marketPlayer":

@@ -2,6 +2,7 @@ package lordostrov.traderplugin.menu;
 
 
 import de.tr7zw.nbtapi.NBTItem;
+import lordostrov.traderplugin.manageDB.Manager;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -9,7 +10,11 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 
 public class SellMenu {
     private static CustomInventory customInventory = new CustomInventory();
@@ -83,6 +88,8 @@ public class SellMenu {
         ItemStack close = customInventory.createButton(Material.BARRIER, "close_shop",
                 "§aЗакрыть инвентарь", "§7Нажмите для закрытия");
 
+        itemsOfPlayer(inv, player);
+
         inv.setItem(45, back);
         inv.setItem(49, close);
 
@@ -93,7 +100,7 @@ public class SellMenu {
         player.openInventory(inv);
     }
 
-    public static void fillBarrierSellMenu(Inventory inv, String inventoryTitle) {
+    private static void fillBarrierSellMenu(Inventory inv, String inventoryTitle) {
         ItemStack barrier = new ItemStack(Material.GRAY_STAINED_GLASS_PANE);
 
         // Сначала NBT
@@ -126,7 +133,7 @@ public class SellMenu {
     }
 
 
-    public static void numbersButtons(Inventory inv) {
+    private static void numbersButtons(Inventory inv) {
 
         ItemStack banner_0 = customInventory.createButton(Material.CYAN_BANNER, "banner_0",
                 "§a0");
@@ -163,6 +170,73 @@ public class SellMenu {
         inv.setItem(8, banner_9);
         inv.setItem(35, banner_delete);
     }
+
+    private static void itemsOfPlayer(Inventory inv, Player player) {
+        String uuid = player.getUniqueId().toString();
+        Manager dbManager = new Manager();
+
+        try {
+            // Получаем все записи игрока из marketPlayer
+            ResultSet rs = dbManager.executeQuery(
+                    "SELECT material, quantity, cost FROM marketPlayer WHERE uuid = '" + uuid + "'");
+
+            int slot = 0; // Слот для размещения предметов в инвентаре
+
+            while (rs.next()) {
+                String materialName = rs.getString("material");
+                int quantity = rs.getInt("quantity");
+                int cost = rs.getInt("cost");
+
+                // Получаем Material по имени
+                Material material;
+                try {
+                    material = Material.valueOf(materialName.toUpperCase());
+                } catch (IllegalArgumentException e) {
+                    // Если материал не найден, пропускаем
+                    continue;
+                }
+
+                // Форматируем название по новому стилю
+                List<String> lore = Arrays.asList(
+                        "§7Количество: §f" + quantity,
+                        "§7Цена: §6" + cost + " USDT",
+                        "§8Нажмите для взаимодействия"
+                );
+
+                ItemStack itemButton = createButtonOfItemPlayer(
+                        material,
+                        "player_item",
+                        lore.toArray(new String[0]));
+
+                // Добавляем кнопку в инвентарь
+                inv.setItem(slot, itemButton);
+                slot++;
+
+                // Если инвентарь заполнен, выходим
+                if (slot >= inv.getSize()) break;
+            }
+
+        } catch (SQLException e) {
+            player.sendMessage("§cОшибка при загрузке ваших предметов");
+            e.printStackTrace();
+        } finally {
+            dbManager.closeConnection();
+        }
+    }
+
+    private static ItemStack createButtonOfItemPlayer(Material material, String buttonId, String... lore) {
+        ItemStack item = new ItemStack(material);
+        ItemMeta meta = item.getItemMeta();
+        meta.setLore(Arrays.asList(lore));
+        item.setItemMeta(meta);
+
+        // Добавляем NBT-тег с идентификатором кнопки
+        NBTItem nbtItem = new NBTItem(item);
+        nbtItem.setString("buttonId", buttonId);
+        nbtItem.setBoolean("immovable", true);
+        return nbtItem.getItem();
+    }
+
 
 
 

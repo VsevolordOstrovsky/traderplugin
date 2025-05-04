@@ -86,15 +86,18 @@ public class ManageStrok {
     }
 
     public static int extractPrice(String input) {
-        // Удаляем все не-цифры, кроме минуса (если нужны отрицательные цены)
-        String numericString = input.replaceAll("[^0-9]", "").trim();
+        // Ищем последовательность цифр, которая представляет цену
+        // Обычно цена идет после какого-то разделителя, например двоеточия
+        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("(?<=:)\\s*\\d+");
+        java.util.regex.Matcher matcher = pattern.matcher(input);
 
-        if (!numericString.isEmpty()) {
+        if (matcher.find()) {
             try {
-                return Integer.parseInt(numericString);
+                // Извлекаем найденное число
+                return Integer.parseInt(matcher.group().trim());
             } catch (NumberFormatException e) {
                 System.err.println("Ошибка при преобразовании числа: " + e.getMessage());
-                return 0; // или другое значение по умолчанию
+                return 0;
             }
         }
         return 0; // если цена не найдена

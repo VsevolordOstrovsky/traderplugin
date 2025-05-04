@@ -18,6 +18,8 @@ import org.bukkit.inventory.InventoryView;
 import org.bukkit.inventory.ItemStack;
 
 import java.lang.reflect.Type;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -89,6 +91,11 @@ public class InventoryListener implements Listener {
                 // сделать push_item button
                 case "push_item":
                     pushItemToMarket(player, event.getInventory());
+                    break;
+                case "player_item":
+                    System.out.println(clicked.getType());
+                    givePlayerItemsFromMarket(player, clicked.getType());
+                    openMyItemMenu(player);
                     break;
 
 
@@ -232,8 +239,69 @@ public class InventoryListener implements Listener {
             player.sendMessage(ChatColor.RED + "Цена не указана!!!");
         }
 
+        openSellMenu(player);
 
 
+    }
+
+    public boolean givePlayerItemsFromMarket(Player player, Material material) {
+        Manager dbManager = new Manager();
+
+        String uuid = player.getUniqueId().toString();
+        try {
+            // Получаем количество предметов из БД
+            ResultSet rs = dbManager.executeQuery(
+                    "SELECT quantity FROM marketPlayer WHERE uuid = '" + uuid + "' AND material = '" + material.name() + "'");
+
+            if (rs.next()) {
+                int quantity = rs.getInt("quantity");
+
+                // Создаем ItemStack
+                ItemStack itemStack = new ItemStack(material, quantity);
+
+                // Добавляем предметы в инвентарь (остатки выпадут на землю)
+                HashMap<Integer, ItemStack> leftover = player.getInventory().addItem(itemStack);
+
+                // Если что-то не поместилось - выбросить на землю
+                if (!leftover.isEmpty()) {
+                    for (ItemStack item : leftover.values()) {
+                        player.getWorld().dropItemNaturally(player.getLocation(), item);
+                    }
+                    player.sendMessage("§eНе все предметы поместились в инвентарь!");
+                }
+
+                // Удаляем запись из БД
+                dbManager.executeUpdate(
+                        "DELETE FROM marketPlayer WHERE uuid = '" + uuid + "' AND material = '" + material.name() + "'");
+
+                player.sendMessage("§aВы получили " + quantity + " " + formatMaterialName(material.name()));
+                return true;
+            } else {
+                player.sendMessage("§cУ вас нет таких предметов на рынке");
+                return false;
+            }
+
+        } catch (SQLException e) {
+            player.sendMessage("§cОшибка при получении предметов");
+            e.printStackTrace();
+            return false;
+        } finally {
+            dbManager.closeConnection();
+        }
+    }
+
+    // Вспомогательная функция для форматирования названия
+    private static String formatMaterialName(String materialName) {
+        String[] parts = materialName.split("_");
+        StringBuilder result = new StringBuilder();
+        for (String part : parts) {
+            if (!part.isEmpty()) {
+                result.append(part.substring(0, 1).toUpperCase())
+                        .append(part.substring(1).toLowerCase())
+                        .append(" ");
+            }
+        }
+        return result.toString().trim();
     }
 
 }
