@@ -56,7 +56,7 @@
                                 <!-- Путь к папке plugins вашего сервера -->
                                 <copy
                                         file="${project.build.directory}/${project.build.finalName}.jar"
-                                        tofile="C:\Server\plugins\${project.name}.jar"
+                                        tofile="/home/vsevolod/serverMC/plugins/${project.name}.jar"
                                 />
                                 <echo>Плагин скопирован в папку сервера!</echo>
                             </target>

@@ -19,15 +19,18 @@ import java.util.List;
 public class SellMenu {
     private static CustomInventory customInventory = new CustomInventory();
     private static HashMap<Player, Long> currentNumbers = new HashMap<>();
+    private static HashMap<Player, Integer> currentPages = new HashMap<>();
 
     public static HashMap<Player, Long> getCurrentNumbers() {
         return currentNumbers;
     }
+    public static HashMap<Player, Integer> getCurrentPages() {
+        return currentPages;
+    }
 
     // Храним текущие числа для каждого игрока
 
-    public static void openBuyMenu(Player player){
-        String title = "Рынок";
+    public static void openBuyMenu(Player player, String title, int page){
 
         Inventory inv = Bukkit.createInventory(null, 54, title);
 
@@ -37,8 +40,18 @@ public class SellMenu {
         ItemStack close = customInventory.createButton(Material.BARRIER, "close_shop",
                 "§aЗакрыть инвентарь", "§7Нажмите для закрытия");
 
+        ItemStack next_page = customInventory.createButton(Material.GREEN_BANNER, "next_page", "§aПерейти на следующую страницу", "§7Нажмите для дейсвия");
+
+        ItemStack last_page = customInventory.createButton(Material.GREEN_BANNER, "last_page", "§aПерейти на предыдущую страницу", "§7Нажмите для дейсвия");
+
+        itemsOfAllPlayer(inv, player, page);
+
         inv.setItem(45, back);
         inv.setItem(49, close);
+        inv.setItem(53, next_page);
+        inv.setItem(52, last_page);
+
+        currentPages.put(player, page);
 
         customInventory.fillInventory(inv, title);
 
@@ -80,7 +93,7 @@ public class SellMenu {
     public static void openMyItemMenu(Player player){
         String title = "Мои лоты";
 
-        Inventory inv = Bukkit.createInventory(null, 54, title);
+        Inventory inv = Bukkit.createInventory(null, 18, title);
 
         ItemStack back = customInventory.createButton(Material.FILLED_MAP, "back_to_shop",
                 "§aНазад", "§7При переходе назад данные не сохраняются");
@@ -90,8 +103,8 @@ public class SellMenu {
 
         itemsOfPlayer(inv, player);
 
-        inv.setItem(45, back);
-        inv.setItem(49, close);
+        inv.setItem(9, back);
+        inv.setItem(13, close);
 
 
         customInventory.fillInventory(inv, title);
@@ -224,6 +237,64 @@ public class SellMenu {
         }
     }
 
+    private static void itemsOfAllPlayer(Inventory inv, Player player, Integer page) {
+        String uuid = player.getUniqueId().toString();
+        Manager dbManager = new Manager();
+
+        try {
+            // Определяем количество предметов на странице и смещение
+            int itemsPerPage = 45;
+            int offset = (page - 1) * itemsPerPage;
+
+            // Получаем все записи игроков из marketPlayer с учетом пагинации
+            ResultSet rs = dbManager.executeQuery(
+                    "SELECT material, quantity, cost FROM marketPlayer WHERE uuid != '" + uuid + "' LIMIT " + itemsPerPage + " OFFSET " + offset);
+
+            int slot = 0; // Слот для размещения предметов в инвентаре
+
+            while (rs.next()) {
+                String materialName = rs.getString("material");
+                int quantity = rs.getInt("quantity");
+                int cost = rs.getInt("cost");
+
+                // Получаем Material по имени
+                Material material;
+                try {
+                    material = Material.valueOf(materialName.toUpperCase());
+                } catch (IllegalArgumentException e) {
+                    // Если материал не найден, пропускаем
+                    continue;
+                }
+
+                // Форматируем название по новому стилю
+                List<String> lore = Arrays.asList(
+                        "§7Количество: §f" + quantity,
+                        "§7Цена: §6" + cost + " USDT",
+                        "§8Нажмите для взаимодействия"
+                );
+
+                ItemStack itemButton = createButtonOfItemPlayer(
+                        material,
+                        "all_player_item",
+                        lore.toArray(new String[0]));
+
+                // Добавляем кнопку в инвентарь
+                inv.setItem(slot, itemButton);
+                slot++;
+
+                // Если инвентарь заполнен, выходим
+                if (slot >= itemsPerPage) break;
+            }
+
+        } catch (SQLException e) {
+            player.sendMessage("§cОшибка при загрузке предметов");
+            e.printStackTrace();
+        } finally {
+            dbManager.closeConnection();
+        }
+    }
+
+
     private static ItemStack createButtonOfItemPlayer(Material material, String buttonId, String... lore) {
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
@@ -237,7 +308,14 @@ public class SellMenu {
         return nbtItem.getItem();
     }
 
-
+    public static int getPage(Player player){
+        Manager dbManager = new Manager();
+        String uuid = player.getUniqueId().toString();
+        int counts = dbManager.countPlayerMarketRecords(uuid);
+        System.out.println("-------------------- Counts: "+counts);
+        int page = 1 + counts / 45;
+        return page;
+    }
 
 
 

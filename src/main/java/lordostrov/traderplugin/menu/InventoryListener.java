@@ -29,9 +29,12 @@ public class InventoryListener implements Listener {
     CustomInventory customInventory = new CustomInventory();
     SellMenu sellMenu = new SellMenu();
     HashMap<Player, Long> currentNumbers = sellMenu.getCurrentNumbers();
+    HashMap<Player, Integer> currentPages = sellMenu.getCurrentPages();
     ManageInventory manageInventory = new ManageInventory();
     Manager managerBD = new Manager();
     ManageStrok manageStrok = new ManageStrok();
+
+    int page = 1;
 
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
@@ -48,6 +51,7 @@ public class InventoryListener implements Listener {
 
             String buttonId = nbt.getString("buttonId");
             Player player = (Player) event.getWhoClicked();
+            page = currentPages.getOrDefault(player, 1);
             // Обработка цифровых баннеров
             if (buttonId.startsWith("banner_")) {
                 handleBannerClick(player, buttonId, event.getInventory());
@@ -77,7 +81,9 @@ public class InventoryListener implements Listener {
 
                 /*---SellMenu---*/
                 case "buy_market_menu":
-                    openBuyMenu(player);
+
+                    newTitleOfBuyMenu(player,page);
+                    System.out.println("------------- Page: "+page);
                     break;
                 case "sell_market_menu":
                     openSellMenu(player);
@@ -97,8 +103,27 @@ public class InventoryListener implements Listener {
                     givePlayerItemsFromMarket(player, clicked.getType());
                     openMyItemMenu(player);
                     break;
+                case "last_page":
+                    System.out.println("------------- maxPage: "+sellMenu.getPage(player));
+                    if(page > 1){
+                        page--;
+                        newTitleOfBuyMenu(player, page);
+                    }else{
+                        player.sendMessage(ChatColor.RED + "Это первая страница");
+                    }
+                    System.out.println("------------- Page: "+page);
+                    break;
+                case "next_page":
+                    System.out.println("------------- maxPage: "+sellMenu.getPage(player));
 
-
+                    if(page < sellMenu.getPage(player)){
+                        page++;
+                        newTitleOfBuyMenu(player, page);
+                    }else{
+                        player.sendMessage(ChatColor.RED + "Страниц больше нету");
+                    }
+                    System.out.println("------------- Page: "+page);
+                    break;
 
 
                 /*--------------*/
@@ -145,7 +170,7 @@ public class InventoryListener implements Listener {
     /*------------*/
 
     /*---SellMenu---*/
-    void openBuyMenu(Player player){sellMenu.openBuyMenu(player);}
+    void openBuyMenu(Player player, int page){sellMenu.openBuyMenu(player, "Рынок: "+page+"/"+sellMenu.getPage(player),1);}
     void openSellMenu(Player player){sellMenu.openSellMenu(player);}
     void openMyItemMenu(Player player){sellMenu.openMyItemMenu(player);}
     void closeInventory(Player player){
@@ -215,10 +240,12 @@ public class InventoryListener implements Listener {
         int cost = manageStrok.extractPrice(inventoryTitle);
         String uuid = player.getUniqueId().toString();
 
-        if(managerBD.countRecordsByUuid(uuid) >= 5){
-            player.sendMessage(ChatColor.RED + "Вы можете выстовить не более 5 предложений!!!");
-            return;
-        }
+
+        // Раскоментировать после отладки меню покупки.
+//        if(managerBD.countRecordsByUuid(uuid) >= 5){
+//            player.sendMessage(ChatColor.RED + "Вы можете выстовить не более 5 предложений!!!");
+//            return;
+//        }
 
         if(value == -1 && key == Material.BARRIER){
             player.sendMessage(ChatColor.RED + "Вы пытаетесь продать разные предметы!!!");
@@ -244,7 +271,7 @@ public class InventoryListener implements Listener {
 
     }
 
-    public boolean givePlayerItemsFromMarket(Player player, Material material) {
+    private void givePlayerItemsFromMarket(Player player, Material material) {
         Manager dbManager = new Manager();
 
         String uuid = player.getUniqueId().toString();
@@ -269,39 +296,35 @@ public class InventoryListener implements Listener {
                     }
                     player.sendMessage("§eНе все предметы поместились в инвентарь!");
                 }
+                dbManager.closeConnection();
 
                 // Удаляем запись из БД
                 dbManager.executeUpdate(
                         "DELETE FROM marketPlayer WHERE uuid = '" + uuid + "' AND material = '" + material.name() + "'");
-
-                player.sendMessage("§aВы получили " + quantity + " " + formatMaterialName(material.name()));
-                return true;
+                player.sendMessage("§aВы получили вернули свой предмет");
             } else {
                 player.sendMessage("§cУ вас нет таких предметов на рынке");
-                return false;
             }
 
         } catch (SQLException e) {
             player.sendMessage("§cОшибка при получении предметов");
             e.printStackTrace();
-            return false;
         } finally {
             dbManager.closeConnection();
         }
     }
 
-    // Вспомогательная функция для форматирования названия
-    private static String formatMaterialName(String materialName) {
-        String[] parts = materialName.split("_");
-        StringBuilder result = new StringBuilder();
-        for (String part : parts) {
-            if (!part.isEmpty()) {
-                result.append(part.substring(0, 1).toUpperCase())
-                        .append(part.substring(1).toLowerCase())
-                        .append(" ");
-            }
-        }
-        return result.toString().trim();
+
+
+    private void newTitleOfBuyMenu(Player player, int page){
+        int maxPage = sellMenu.getPage(player);
+        String newTitle = "Рынок: "+page+"/"+maxPage;
+        updateBuyMenuTitle(player, newTitle, page);
     }
+
+    private void updateBuyMenuTitle(Player player, String newTitle, int page) {
+        sellMenu.openBuyMenu(player, newTitle, page);
+    }
+
 
 }

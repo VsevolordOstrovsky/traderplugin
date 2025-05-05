@@ -137,10 +137,13 @@ public class Manager {
     }
 
     public void createTables() throws SQLException {
-        getConnection();
+
         // Не забыть удалить строку после отладки!!!
-        dropTable("marketPlayer");
-        dropTable("player");
+//        dropTable("marketPlayer");
+//        dropTable("player");
+//        dropTable("cryptoPlayer");
+//        dropTable("rating");
+        getConnection();
         createTablePlayer(connection);
         createTableCryptoPlayer(connection);
         createTableMarketPlayer(connection);
@@ -207,36 +210,6 @@ public class Manager {
         return resultSet;
     }
 
-//    public boolean insertOrUpdateMarketPlayer(String uuid, String material, int quantity, int cost) {
-//        getConnection();
-//        try {
-//            String sql = "INSERT INTO marketPlayer(uuid, material, quantity, cost) VALUES(?,?,?,?) " +
-//                    "ON CONFLICT(uuid) DO UPDATE SET " +
-//                    "material = excluded.material, " +
-//                    "quantity = excluded.quantity, " +
-//                    "cost = excluded.cost";
-//
-//            try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
-//                pstmt.setString(1, uuid);
-//                pstmt.setString(2, material);
-//                pstmt.setInt(3, quantity);
-//                pstmt.setInt(4, cost);
-//
-//                int affectedRows = pstmt.executeUpdate();
-//                return affectedRows > 0;
-//            }
-//        } catch (SQLException e) {
-//            if (e.getMessage().contains("FOREIGN KEY constraint failed")) {
-//                System.err.println("Ошибка: игрок с UUID " + uuid + " не существует в таблице player");
-//            } else {
-//                System.err.println("SQL ошибка при работе с marketPlayer: " + e.getMessage());
-//            }
-//            return false;
-//        } finally {
-//            closeConnection();
-//        }
-//    }
-
     public boolean insertMarketPlayer(String uuid, String material, int quantity, int cost) {
         getConnection();
         try {
@@ -265,6 +238,7 @@ public class Manager {
         }
     }
     public boolean dropTable(String tableName) {
+        getConnection();
 
         try {
             // Проверяем существование таблицы перед удалением
@@ -283,7 +257,7 @@ public class Manager {
             System.err.println("Ошибка при удалении таблицы " + tableName + ": " + e.getMessage());
             return false;
         } finally {
-
+            closeConnection();
         }
     }
 
@@ -338,6 +312,28 @@ public class Manager {
         } finally {
             // Автоматически закрывает PreparedStatement благодаря try-with-resources
             closeConnection();
+        }
+    }
+
+    public int countPlayerMarketRecords(String uuid) {
+        String sql = "SELECT COUNT(*) AS player_total FROM marketPlayer WHERE uuid != ?";
+
+        getConnection();
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+
+            // Устанавливаем параметр и таймаут
+            pstmt.setString(1, uuid);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("player_total");
+                }
+                return 0;
+            }
+
+        } catch (SQLException e) {
+            System.err.println("Ошибка при подсчёте записей игрока: " + e.getMessage());
+            return -1;
         }
     }
 

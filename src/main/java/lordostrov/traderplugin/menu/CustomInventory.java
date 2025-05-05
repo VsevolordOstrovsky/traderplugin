@@ -20,8 +20,6 @@ public class CustomInventory {
         // Создаем инвентарь с 27 слотами (3 ряда) и названием
         Inventory inv = Bukkit.createInventory(null, 18, title);
 
-
-
         ItemStack shop = createButton(Material.EMERALD, "open_shop",
                 "§aМагазин", "§7Нажмите чтобы открыть магазин");
 
