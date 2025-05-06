@@ -1,6 +1,9 @@
 package lordostrov.traderplugin.trade;
 
-public class ManageMath {
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+public class ManageStrok {
 
     public static String addStringFloats(String a, String b) {
         // Проверка на пустые строки
@@ -81,5 +84,24 @@ public class ManageMath {
         }
         return s;
     }
+
+    public static int extractPrice(String input) {
+        // Ищем последовательность цифр, которая представляет цену
+        // Обычно цена идет после какого-то разделителя, например двоеточия
+        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("(?<=:)\\s*\\d+");
+        java.util.regex.Matcher matcher = pattern.matcher(input);
+
+        if (matcher.find()) {
+            try {
+                // Извлекаем найденное число
+                return Integer.parseInt(matcher.group().trim());
+            } catch (NumberFormatException e) {
+                System.err.println("Ошибка при преобразовании числа: " + e.getMessage());
+                return 0;
+            }
+        }
+        return 0; // если цена не найдена
+    }
+
 
 }
