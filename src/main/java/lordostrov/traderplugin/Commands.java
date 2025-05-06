@@ -96,6 +96,12 @@ public class Commands implements CommandExecutor {
         }
 
         if (command.getName().equalsIgnoreCase("request")) {
+            Player player = (Player) commandSender;
+            if(strings.length < 1) {
+                player.sendMessage(ChatColor.RED + "Ошибка команды /request!!!");
+                player.sendMessage(ChatColor.RED + "Формат команды: /request <ETHUSDT|BTCUSDT|SOLUSDT|XRPUDT>");
+                return false;
+            }
             String tableName = strings[0];
 
             ResultSet rs = null;
@@ -189,6 +195,21 @@ public class Commands implements CommandExecutor {
                 }
                 manager.closeConnection();
             }
+            return true;
+        }
+
+        if(command.getName().equalsIgnoreCase("getUSDT")){
+            Player player = (Player) commandSender;
+            if(strings.length < 1) {
+                player.sendMessage(ChatColor.RED + "Ошибка команды /getUSDT!!!");
+                player.sendMessage(ChatColor.RED + "Формат команды: /getUSDT <quantity>");
+                return false;
+            }
+            String tableName = strings[0];
+            String uuid = player.getUniqueId().toString();
+            manager.addUsdtToPlayer(uuid, tableName);
+            player.sendMessage(ChatColor.BLUE+"Полученно USDT: "+tableName);
+            return true;
 
 
         }

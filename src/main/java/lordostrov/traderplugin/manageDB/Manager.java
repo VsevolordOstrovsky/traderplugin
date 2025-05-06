@@ -155,38 +155,54 @@ public class Manager {
     public void addPlayerIfNotExists(PlayerJoinEvent event) throws SQLException {
         getConnection();
         try {
-            // Проверяем существование игрока
-            PreparedStatement checkStmt = connection.prepareStatement(
-                    "SELECT uuid FROM player WHERE uuid = ?");
-            checkStmt.setString(1, event.getPlayer().getUniqueId().toString());
-            ResultSet rs = checkStmt.executeQuery();
+            String uuid = event.getPlayer().getUniqueId().toString();
+            String name = event.getPlayer().getName();
 
-            if (rs.next()) {
-                // Игрок уже существует
-                return;
+            // Проверяем существование игрока
+            try (PreparedStatement checkStmt = connection.prepareStatement(
+                    "SELECT uuid FROM player WHERE uuid = ?")) {
+                checkStmt.setString(1, uuid);
+                ResultSet rs = checkStmt.executeQuery();
+
+                if (rs.next()) {
+                    // Игрок уже существует
+                    return;
+                }
             }
 
             // Получаем максимальный рейтинг
-            Statement maxRatingStmt = connection.createStatement();
-            ResultSet maxRatingRs = maxRatingStmt.executeQuery(
-                    "SELECT COALESCE(MAX(rating), 0) + 1 AS next_rating FROM player");
-            int nextRating = maxRatingRs.next() ? maxRatingRs.getInt("next_rating") : 1;
+            int nextRating;
+            try (Statement maxRatingStmt = connection.createStatement();
+                 ResultSet maxRatingRs = maxRatingStmt.executeQuery(
+                         "SELECT COALESCE(MAX(rating), 0) + 1 AS next_rating FROM player")) {
+                nextRating = maxRatingRs.next() ? maxRatingRs.getInt("next_rating") : 1;
+            }
 
             // Добавляем нового игрока
-            PreparedStatement insertStmt = connection.prepareStatement(
-                    "INSERT INTO player (uuid, name, rating) VALUES (?, ?, ?)");
-            insertStmt.setString(1, event.getPlayer().getUniqueId().toString());
-            insertStmt.setString(2, event.getPlayer().getName());
-            insertStmt.setInt(3, nextRating);
-            insertStmt.executeUpdate();
+            try (PreparedStatement insertStmt = connection.prepareStatement(
+                    "INSERT INTO player (uuid, name, rating, usdt) VALUES (?, ?, ?, ?)")) {
+                insertStmt.setString(1, uuid);
+                insertStmt.setString(2, name);
+                insertStmt.setInt(3, nextRating);
+                insertStmt.setString(4, "0"); // Начальный баланс USDT
+                insertStmt.executeUpdate();
+            }
 
-            // Создаем записи в связанных таблицах
-            PreparedStatement cryptoStmt = connection.prepareStatement(
-                    "INSERT INTO cryptoPlayer (uuid) VALUES (?)");
-            cryptoStmt.setString(1, event.getPlayer().getUniqueId().toString());
-            cryptoStmt.executeUpdate();
+            // Добавляем в cryptoPlayer
+            try (PreparedStatement cryptoStmt = connection.prepareStatement(
+                    "INSERT INTO cryptoPlayer (uuid) VALUES (?)")) {
+                cryptoStmt.setString(1, uuid);
+                cryptoStmt.executeUpdate();
+            }
 
-            // Аналогично для других таблиц...
+            // Добавляем в rating
+            try (PreparedStatement ratingStmt = connection.prepareStatement(
+                    "INSERT INTO rating (rating, uuid, usdt) VALUES (?, ?, ?)")) {
+                ratingStmt.setInt(1, nextRating);
+                ratingStmt.setString(2, uuid);
+                ratingStmt.setString(3, "0"); // Начальный баланс USDT
+                ratingStmt.executeUpdate();
+            }
 
         } finally {
             closeConnection();
@@ -337,5 +353,99 @@ public class Manager {
         }
     }
 
+    /**
+     * Добавляет или списывает USDT у игрока
+     * @param uuid UUID игрока
+     * @param amount Сумма для изменения (может быть отрицательной)
+     * @return true если операция успешна, false при ошибке
+     */
+    public boolean addUsdtToPlayer(String uuid, String amount) {
+        // Проверяем валидность суммы
+        try {
+            new java.math.BigDecimal(amount);
+        } catch (NumberFormatException e) {
+            System.err.println("Некорректная сумма USDT: " + amount);
+            return false;
+        }
 
+        Connection conn = null;
+        PreparedStatement checkStmt = null;
+        PreparedStatement updatePlayerStmt = null;
+        PreparedStatement updateRatingStmt = null;
+        ResultSet rs = null;
+
+        try {
+            // 1. Получаем соединение и начинаем транзакцию
+            getConnection();
+            conn = this.connection;
+            conn.setAutoCommit(false);
+
+            // 2. Проверяем существование игрока (без FOR UPDATE)
+            checkStmt = conn.prepareStatement(
+                    "SELECT usdt FROM player WHERE uuid = ?");
+            checkStmt.setString(1, uuid);
+            rs = checkStmt.executeQuery();
+
+            if (!rs.next()) {
+                System.err.println("Игрок с UUID " + uuid + " не найден");
+                return false;
+            }
+
+            // 3. Получаем текущий баланс
+            String currentUsdt = rs.getString("usdt");
+            java.math.BigDecimal current = new java.math.BigDecimal(currentUsdt);
+            java.math.BigDecimal change = new java.math.BigDecimal(amount);
+            java.math.BigDecimal newBalance = current.add(change);
+
+            // 4. Проверяем, что баланс не станет отрицательным
+            if (newBalance.compareTo(java.math.BigDecimal.ZERO) < 0) {
+                System.err.println("Недостаточно USDT у игрока " + uuid);
+                return false;
+            }
+
+            // 5. Обновляем баланс в player
+            updatePlayerStmt = conn.prepareStatement(
+                    "UPDATE player SET usdt = ? WHERE uuid = ?");
+            updatePlayerStmt.setString(1, newBalance.toPlainString());
+            updatePlayerStmt.setString(2, uuid);
+            updatePlayerStmt.executeUpdate();
+
+            // 6. Обновляем баланс в rating
+            updateRatingStmt = conn.prepareStatement(
+                    "UPDATE rating SET usdt = ? WHERE uuid = ?");
+            updateRatingStmt.setString(1, newBalance.toPlainString());
+            updateRatingStmt.setString(2, uuid);
+            updateRatingStmt.executeUpdate();
+
+            conn.commit();
+
+
+
+            return true;
+
+        } catch (SQLException e) {
+            try {
+                if (conn != null) conn.rollback();
+            } catch (SQLException ex) {
+                System.err.println("Ошибка при откате: " + ex.getMessage());
+            }
+            System.err.println("Ошибка изменения баланса: " + e.getMessage());
+            return false;
+        } finally {
+            // Закрываем ресурсы в правильном порядке
+            try { if (rs != null) rs.close(); } catch (SQLException e) { /* игнорируем */ }
+            try { if (checkStmt != null) checkStmt.close(); } catch (SQLException e) { /* игнорируем */ }
+            try { if (updatePlayerStmt != null) updatePlayerStmt.close(); } catch (SQLException e) { /* игнорируем */ }
+            try { if (updateRatingStmt != null) updateRatingStmt.close(); } catch (SQLException e) { /* игнорируем */ }
+
+            // Восстанавливаем autoCommit
+            try {
+                if (conn != null) {
+                    conn.setAutoCommit(true);
+                }
+            } catch (SQLException e) {
+                System.err.println("Ошибка восстановления autoCommit: " + e.getMessage());
+            }
+        }
+    }
 }

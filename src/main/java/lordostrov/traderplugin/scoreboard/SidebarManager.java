@@ -39,13 +39,14 @@ public class SidebarManager implements Listener {
         }
 
         // Добавление новых строк
-        int score = 10;
-        addLine(objective, "§7──────────", score--);
-        addLine(objective, "§fBTC: §a" + getBtcBalance(player), score--);
-        addLine(objective, "§bETH: §a" + getEthBalance(player), score--);
-        addLine(objective, "§eSOL: §a" + getSolBalance(player), score--);
-        addLine(objective, "§7──────────", score--);
-        addLine(objective, "§fИгрок: §b" + player.getName(), score--);
+        int score = 1;
+        addLine(objective, "§7──────────", score++);
+        addLine(objective, "§fUSDT: §a" + getBtcBalance(player), score++);
+        addLine(objective, "§fBTC: §a" + getBtcBalance(player), score++);
+        addLine(objective, "§bETH: §a" + getEthBalance(player), score++);
+        addLine(objective, "§eSOL: §a" + getSolBalance(player), score++);
+        addLine(objective, "§7──────────", score++);
+        addLine(objective, "§fИгрок: §b" + player.getName(), score++);
     }
 
     private void addLine(Objective objective, String text, int score) {

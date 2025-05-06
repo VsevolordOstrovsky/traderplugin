@@ -21,3 +21,8 @@ commands:
     description:
       permission:
       usage: /<command> <table>
+
+  getUSDT:
+    description:
+      permission:
+      usage: /<command> <quantity>
