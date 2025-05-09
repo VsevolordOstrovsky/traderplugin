@@ -80,7 +80,7 @@ public class SellMenu {
         inv.setItem(49, close);
         inv.setItem(53, push);
 
-        numbersButtons(inv);
+        numbersButtons(inv, "banner");
         fillBarrierSellMenu(inv, title);
 
         // Инициализируем число для игрока
@@ -108,6 +108,35 @@ public class SellMenu {
 
 
         customInventory.fillInventory(inv, title);
+
+        // Открываем инвентарь игроку
+        player.openInventory(inv);
+    }
+
+    public static void openBuyItemMenu(Player player, ItemStack item){
+        String title = "Покупка";
+        Inventory inv = Bukkit.createInventory(null, 54, title);
+
+        ItemStack back = customInventory.createButton(Material.FILLED_MAP, "back_to_shop",
+                "§aНазад", "§7При переходе назад данные не сохраняются");
+
+        ItemStack close = customInventory.createButton(Material.BARRIER, "close_shop",
+                "§aЗакрыть инвентарь", "§7Нажмите для закрытия");
+
+        ItemStack buy = customInventory.createButton(Material.EMERALD, "buy_item",
+                "§aКупить");
+
+
+        inv.setItem(45, back);
+        inv.setItem(49, close);
+        inv.setItem(53, buy);
+
+        inv.setItem(10, item);
+
+        numbersButtons(inv, "quantity");
+        fillBarrierBuyItemMenu(inv, title);
+
+        currentNumbers.put(player, 0L);
 
         // Открываем инвентарь игроку
         player.openInventory(inv);
@@ -145,30 +174,91 @@ public class SellMenu {
 
     }
 
+    private static void fillBarrierBuyItemMenu(Inventory inv, String inventoryTitle) {
+        ItemStack barrier = new ItemStack(Material.GRAY_STAINED_GLASS_PANE);
+        ItemStack green_barrier = new ItemStack(Material.LIME_STAINED_GLASS_PANE);
 
-    private static void numbersButtons(Inventory inv) {
+        // Сначала NBT
+        NBTItem nbtItem = new NBTItem(barrier);
+        nbtItem.setBoolean("immovable", true);
+        barrier = nbtItem.getItem();
 
-        ItemStack banner_0 = customInventory.createButton(Material.CYAN_BANNER, "banner_0",
+        // Потом ItemMeta и флаги
+        ItemMeta meta = barrier.getItemMeta();
+        meta.setDisplayName(inventoryTitle); // Устанавливаем пустое название
+        barrier.setItemMeta(meta);
+
+        // Сначала NBT
+        nbtItem = new NBTItem(green_barrier);
+        nbtItem.setBoolean("immovable", true);
+        green_barrier = nbtItem.getItem();
+
+        // Потом ItemMeta и флаги
+        meta = green_barrier.getItemMeta();
+        meta.setDisplayName(inventoryTitle); // Устанавливаем пустое название
+        green_barrier.setItemMeta(meta);
+
+
+        inv.setItem(33, barrier);
+        inv.setItem(32, barrier);
+        inv.setItem(9, green_barrier);
+        inv.setItem(11, green_barrier);
+        inv.setItem(3, barrier);
+        inv.setItem(12, barrier);
+        inv.setItem(21, barrier);
+
+        for(int i = 0; i <= 2; i++){
+            inv.setItem(i, green_barrier);
+        }
+        for(int i = 18; i <= 20; i++){
+            inv.setItem(i, green_barrier);
+        }
+
+        for(int i = 5; i <= 30; i+=9){
+            inv.setItem(i, barrier);
+        }
+
+        for(int i = 27; i <= 30; i++){
+            inv.setItem(i, barrier);
+        }
+
+        for(int i = 36; i <= 44; i++){
+            inv.setItem(i, barrier);
+        }
+        for(int i = 46; i <= 48; i++){
+            inv.setItem(i, barrier);
+        }
+        for(int i = 50; i <= 52; i++){
+            inv.setItem(i, barrier);
+        }
+
+
+    }
+
+
+    private static void numbersButtons(Inventory inv, String prefix) {
+
+        ItemStack banner_0 = customInventory.createButton(Material.CYAN_BANNER, prefix+"_0",
                 "§a0");
-        ItemStack banner_1 = customInventory.createButton(Material.CYAN_BANNER, "banner_1",
+        ItemStack banner_1 = customInventory.createButton(Material.CYAN_BANNER, prefix+"_1",
                 "§a1");
-        ItemStack banner_2 = customInventory.createButton(Material.CYAN_BANNER, "banner_2",
+        ItemStack banner_2 = customInventory.createButton(Material.CYAN_BANNER, prefix+"_2",
                 "§a2");
-        ItemStack banner_3 = customInventory.createButton(Material.CYAN_BANNER, "banner_3",
+        ItemStack banner_3 = customInventory.createButton(Material.CYAN_BANNER, prefix+"_3",
                 "§a3");
-        ItemStack banner_4 = customInventory.createButton(Material.CYAN_BANNER, "banner_4",
+        ItemStack banner_4 = customInventory.createButton(Material.CYAN_BANNER, prefix+"_4",
                 "§a4");
-        ItemStack banner_5 = customInventory.createButton(Material.CYAN_BANNER, "banner_5",
+        ItemStack banner_5 = customInventory.createButton(Material.CYAN_BANNER, prefix+"_5",
                 "§a5");
-        ItemStack banner_6 = customInventory.createButton(Material.CYAN_BANNER, "banner_6",
+        ItemStack banner_6 = customInventory.createButton(Material.CYAN_BANNER, prefix+"_6",
                 "§a6");
-        ItemStack banner_7 = customInventory.createButton(Material.CYAN_BANNER, "banner_7",
+        ItemStack banner_7 = customInventory.createButton(Material.CYAN_BANNER, prefix+"_7",
                 "§a7");
-        ItemStack banner_8 = customInventory.createButton(Material.CYAN_BANNER, "banner_8",
+        ItemStack banner_8 = customInventory.createButton(Material.CYAN_BANNER, prefix+"_8",
                 "§a8");
-        ItemStack banner_9 = customInventory.createButton(Material.CYAN_BANNER, "banner_9",
+        ItemStack banner_9 = customInventory.createButton(Material.CYAN_BANNER, prefix+"_9",
                 "§a9");
-        ItemStack banner_delete = customInventory.createButton(Material.RED_BANNER, "banner_delete",
+        ItemStack banner_delete = customInventory.createButton(Material.RED_BANNER, prefix+"_delete",
                 "§adel");
 
         inv.setItem(34, banner_0);
@@ -213,10 +303,11 @@ public class SellMenu {
                 List<String> lore = Arrays.asList(
                         "§7Количество: §f" + quantity,
                         "§7Цена: §6" + cost + " USDT",
-                        "§8Нажмите для взаимодействия"
+                        "§8Нажмите чтобы вернуть предметы"
                 );
 
                 ItemStack itemButton = createButtonOfItemPlayer(
+                        player.getUniqueId().toString(),
                         material,
                         "player_item",
                         lore.toArray(new String[0]));
@@ -274,6 +365,7 @@ public class SellMenu {
                 );
 
                 ItemStack itemButton = createButtonOfItemPlayer(
+                        player.getUniqueId().toString(),
                         material,
                         "all_player_item",
                         lore.toArray(new String[0]));
@@ -295,7 +387,7 @@ public class SellMenu {
     }
 
 
-    private static ItemStack createButtonOfItemPlayer(Material material, String buttonId, String... lore) {
+    private static ItemStack createButtonOfItemPlayer(String uuid,Material material, String buttonId, String... lore) {
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
         meta.setLore(Arrays.asList(lore));
@@ -305,6 +397,8 @@ public class SellMenu {
         NBTItem nbtItem = new NBTItem(item);
         nbtItem.setString("buttonId", buttonId);
         nbtItem.setBoolean("immovable", true);
+        nbtItem.setString("playerUUID", uuid); // Сохраняем UUID
+
         return nbtItem.getItem();
     }
 

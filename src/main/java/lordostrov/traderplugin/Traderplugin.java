@@ -55,7 +55,11 @@ public final class Traderplugin extends JavaPlugin implements Listener {
         // Создание сайдбара для всех онлайн-игроков
         SidebarManager sidebarManager = new SidebarManager(this);
         for (Player player : Bukkit.getOnlinePlayers()) {
-            sidebarManager.createSidebar(player);
+            try {
+                sidebarManager.createSidebar(player);
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
+            }
         }
     }
 

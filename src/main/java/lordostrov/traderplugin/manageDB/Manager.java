@@ -24,9 +24,6 @@ public class Manager {
         String text;
         try {
             connection = DriverManager.getConnection(url);
-            text = "Подключение к базе данных успешно установлено!";
-
-            System.out.println(text);
         } catch (SQLException e) {
             text = "Ошибка при подключении к базе данных:";
             e.printStackTrace();
@@ -49,7 +46,6 @@ public class Manager {
                 connection = null;
             }
             req = "";
-            System.out.println("Connection closed");
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -67,7 +63,7 @@ public class Manager {
                 "    uuid TEXT NOT NULL PRIMARY KEY," +
                 "    name TEXT NOT NULL," +
                 "    usdt TEXT DEFAULT '0'," +
-                "    rating INTEGER NOT NULL UNIQUE" +
+                "    rating INTEGER NOT NULL" +
                 ");";
 
         try (Statement stmt = conn.createStatement()) {
@@ -216,6 +212,27 @@ public class Manager {
         }
     }
 
+    public int countRecordsByUuid(String uuid) {
+        String sql = "SELECT COUNT(*) AS count FROM marketPlayer WHERE uuid = ?";
+
+        getConnection();
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            pstmt.setString(1, uuid);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("count");
+                }
+                return 0;
+            }
+        } catch (SQLException e) {
+            System.err.println("Ошибка при подсчете записей UUID: " + e.getMessage());
+            return -1;
+        } finally {
+            closeConnection();
+        }
+    }
+
 
     public ResultSet executeQuery(String sql) throws SQLException {
         getConnection();
@@ -271,33 +288,6 @@ public class Manager {
         } catch (SQLException e) {
             System.err.println("Ошибка при удалении таблицы " + tableName + ": " + e.getMessage());
             return false;
-        } finally {
-            closeConnection();
-        }
-    }
-
-    /**
-     * Подсчитывает количество записей с указанным UUID в таблице marketPlayer
-     * @param uuid UUID для проверки
-     * @return количество найденных записей (0 если не найдено)
-     */
-    public int countRecordsByUuid(String uuid) {
-        getConnection();
-        try {
-            String sql = "SELECT COUNT(*) AS count FROM marketPlayer WHERE uuid = ?";
-
-            try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
-                pstmt.setString(1, uuid);
-                ResultSet rs = pstmt.executeQuery();
-
-                if (rs.next()) {
-                    return rs.getInt("count");
-                }
-                return 0;
-            }
-        } catch (SQLException e) {
-            System.err.println("Ошибка при подсчёте записей для UUID " + uuid + ": " + e.getMessage());
-            return 0;
         } finally {
             closeConnection();
         }

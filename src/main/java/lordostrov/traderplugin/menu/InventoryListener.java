@@ -4,7 +4,6 @@ import lordostrov.traderplugin.trade.ManageInventory;
 import lordostrov.traderplugin.trade.ManageStrok;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
-import org.bukkit.Color;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -16,13 +15,13 @@ import de.tr7zw.nbtapi.NBTItem;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryView;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 
-import java.lang.reflect.Type;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 
 public class InventoryListener implements Listener {
@@ -30,11 +29,17 @@ public class InventoryListener implements Listener {
     SellMenu sellMenu = new SellMenu();
     HashMap<Player, Long> currentNumbers = sellMenu.getCurrentNumbers();
     HashMap<Player, Integer> currentPages = sellMenu.getCurrentPages();
+    HashMap<Player, Long> currentPricesMap = new HashMap<>();
+    HashMap<Player, Long> currentQuantitiesMap = new HashMap<>();
     ManageInventory manageInventory = new ManageInventory();
     Manager managerBD = new Manager();
     ManageStrok manageStrok = new ManageStrok();
 
     int page = 1;
+
+    BannerHandlerConfig quantityConfig = new BannerHandlerConfig();
+
+    BannerHandlerConfig priceConfig = new BannerHandlerConfig();
 
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
@@ -54,7 +59,19 @@ public class InventoryListener implements Listener {
             page = currentPages.getOrDefault(player, 1);
             // Обработка цифровых баннеров
             if (buttonId.startsWith("banner_")) {
-                handleBannerClick(player, buttonId, event.getInventory());
+
+                priceConfig.setPrefix("banner");
+                priceConfig.setMaxValue(1_000_000_000L);
+                priceConfig.setTitleTemplate("Цена за 1: %s");
+                handleBannerClick(player, buttonId, event.getInventory(), currentPricesMap, priceConfig);
+                return;
+            }
+            if(buttonId.startsWith("quantity_")){
+
+                quantityConfig.setPrefix("quantity");
+                quantityConfig.setTitleTemplate("Количество: %s");
+
+                handleBannerClick(player, buttonId,  event.getInventory(), currentQuantitiesMap, quantityConfig);
                 return;
             }
             switch (buttonId) {
@@ -81,9 +98,7 @@ public class InventoryListener implements Listener {
 
                 /*---SellMenu---*/
                 case "buy_market_menu":
-
                     newTitleOfBuyMenu(player,page);
-                    System.out.println("------------- Page: "+page);
                     break;
                 case "sell_market_menu":
                     openSellMenu(player);
@@ -93,6 +108,8 @@ public class InventoryListener implements Listener {
                     break;
                 case "back_to_shop":
                     open_shop(player);
+                    currentPricesMap.put(player, 0L);
+                    currentQuantitiesMap.put(player, 0L);
                     break;
                 // сделать push_item button
                 case "push_item":
@@ -104,25 +121,23 @@ public class InventoryListener implements Listener {
                     openMyItemMenu(player);
                     break;
                 case "last_page":
-                    System.out.println("------------- maxPage: "+sellMenu.getPage(player));
                     if(page > 1){
                         page--;
                         newTitleOfBuyMenu(player, page);
                     }else{
                         player.sendMessage(ChatColor.RED + "Это первая страница");
                     }
-                    System.out.println("------------- Page: "+page);
                     break;
                 case "next_page":
-                    System.out.println("------------- maxPage: "+sellMenu.getPage(player));
-
                     if(page < sellMenu.getPage(player)){
                         page++;
                         newTitleOfBuyMenu(player, page);
                     }else{
                         player.sendMessage(ChatColor.RED + "Страниц больше нету");
                     }
-                    System.out.println("------------- Page: "+page);
+                    break;
+                case "all_player_item":
+                    openBuyItemMenu(player, event);
                     break;
 
 
@@ -170,41 +185,69 @@ public class InventoryListener implements Listener {
     /*------------*/
 
     /*---SellMenu---*/
-    void openBuyMenu(Player player, int page){sellMenu.openBuyMenu(player, "Рынок: "+page+"/"+sellMenu.getPage(player),1);}
     void openSellMenu(Player player){sellMenu.openSellMenu(player);}
     void openMyItemMenu(Player player){sellMenu.openMyItemMenu(player);}
     void closeInventory(Player player){
         manageInventory.deleteCloseButton(player);
         player.closeInventory();
     }
+    void openBuyItemMenu(Player player, InventoryClickEvent event){
+        ItemStack itemStack = event.getCurrentItem();
+        int quan = getQuantityFromLore(itemStack);
+        quantityConfig.setMaxValue(quan);
+        sellMenu.openBuyItemMenu(player, itemStack);
+    }
 
-    private void handleBannerClick(Player player, String buttonId, Inventory inv) {
 
-        // Получаем текущее число игрока как long
-        long currentNumber = currentNumbers.getOrDefault(player, 0L);
+    private void handleBannerClick(Player player, String buttonId, Inventory inv,
+                                   Map<Player, Long> currentValuesMap,
+                                   BannerHandlerConfig config) {
 
-        if (buttonId.equals("banner_delete")) {
-            // Удаляем последнюю цифру
-            currentNumber = currentNumber / 10;
-        } else {
-            // Получаем цифру из buttonId (banner_1 -> 1)
-            int digit = Integer.parseInt(buttonId.replace("banner_", ""));
+        // Получаем текущее значение игрока
+        long currentValue = currentValuesMap.getOrDefault(player, 0L);
 
-            // Добавляем цифру к числу
-            long newNumber = currentNumber * 10 + digit;
-            if (newNumber > 1_000_000_000L) { // Максимальная цена - 1,000,000,000
-                player.sendMessage("§cМаксимальная цена - 1,000,000,000");
+        // Обработка кнопки удаления
+        if (config.isDeleteLastDigit() && buttonId.equals(config.getPrefix() + "_delete")) {
+            currentValue /= 10;
+            if (currentValue < config.getMinValue()) {
+                currentValue = config.getMinValue();
+            }
+        }
+        // Обработка цифровых кнопок
+        else if (buttonId.startsWith(config.getPrefix() + "_")) {
+            try {
+                int digit = Integer.parseInt(buttonId.replace(config.getPrefix() + "_", ""));
+
+                // Добавляем цифру к числу
+                long newValue = currentValue * 10 + digit;
+
+                // Проверка максимального значения
+                if (newValue > config.getMaxValue()) {
+                    player.sendMessage(String.format("§cМаксимальное значение - %s",
+                            config.getMaxValue()));
+                    return;
+                }
+
+                // Проверка минимального значения
+                if (newValue < config.getMinValue()) {
+                    player.sendMessage(String.format("§cМинимальное значение - %s",
+                            config.getMinValue()));
+                    return;
+                }
+
+                currentValue = newValue;
+            } catch (NumberFormatException e) {
+                // Не цифровая кнопка - игнорируем
                 return;
             }
-            currentNumber = newNumber;
         }
 
-        // Обновляем число игрока
-        currentNumbers.put(player, currentNumber);
+        // Обновляем значение игрока
+        currentValuesMap.put(player, currentValue);
 
-        // Обновляем название инвентаря
-        String newTitle = "Цена за 1: " + currentNumber;
-        updateInventoryTitle(player, inv, newTitle);
+        // Обновляем интерфейс
+        updateInventoryTitle(player, inv,
+                String.format(config.getTitleTemplate(), currentValue));
     }
     private void updateInventoryTitle(Player player, Inventory inv, String newTitle) {
         // К сожалению, Bukkit не позволяет изменить название уже открытого инвентаря,
@@ -242,10 +285,10 @@ public class InventoryListener implements Listener {
 
 
         // Раскоментировать после отладки меню покупки.
-//        if(managerBD.countRecordsByUuid(uuid) >= 5){
-//            player.sendMessage(ChatColor.RED + "Вы можете выстовить не более 5 предложений!!!");
-//            return;
-//        }
+        if(managerBD.countRecordsByUuid(uuid) >= 5){
+            player.sendMessage(ChatColor.RED + "Вы можете выстовить не более 5 предложений!!!");
+            return;
+        }
 
         if(value == -1 && key == Material.BARRIER){
             player.sendMessage(ChatColor.RED + "Вы пытаетесь продать разные предметы!!!");
@@ -267,7 +310,6 @@ public class InventoryListener implements Listener {
         }
 
         openSellMenu(player);
-
 
     }
 
@@ -326,5 +368,34 @@ public class InventoryListener implements Listener {
         sellMenu.openBuyMenu(player, newTitle, page);
     }
 
+    public static int getQuantityFromLore(ItemStack item) {
+        if (item == null || !item.hasItemMeta()) return 0;
+
+        ItemMeta meta = item.getItemMeta();
+        if (meta == null || !meta.hasLore()) return 0;
+
+        List<String> lore = meta.getLore();
+        for (String line : lore) {
+            if (line.contains("Количество:")) {
+                // Находим позицию "Количество:" и берем подстроку после него
+                int startIndex = line.indexOf("Количество:") + "Количество:".length();
+                String afterKeyword = line.substring(startIndex).trim();
+
+                // Удаляем всё, кроме цифр (теперь только число после "Количество:")
+                String numbers = afterKeyword.replaceAll("[^0-9]", "");
+
+                try {
+                    return numbers.isEmpty() ? 0 : Integer.parseInt(numbers);
+                } catch (NumberFormatException e) {
+                    return 0;
+                }
+            }
+        }
+        return 0;
+    }
+
 
 }
+
+
+

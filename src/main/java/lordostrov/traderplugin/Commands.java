@@ -6,6 +6,7 @@ import lordostrov.traderplugin.coins.ManageCoin;
 import lordostrov.traderplugin.coins.ParseResponse;
 import lordostrov.traderplugin.manageDB.Manager;
 import lordostrov.traderplugin.menu.CustomInventory;
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -200,13 +201,15 @@ public class Commands implements CommandExecutor {
 
         if(command.getName().equalsIgnoreCase("getUSDT")){
             Player player = (Player) commandSender;
-            if(strings.length < 1) {
+            if(strings.length < 2) {
                 player.sendMessage(ChatColor.RED + "Ошибка команды /getUSDT!!!");
-                player.sendMessage(ChatColor.RED + "Формат команды: /getUSDT <quantity>");
+                player.sendMessage(ChatColor.RED + "Формат команды: /getUSDT <userName> <quantity>");
                 return false;
             }
-            String tableName = strings[0];
-            String uuid = player.getUniqueId().toString();
+            String userName = strings[0];
+            String tableName = strings[1];
+
+            String uuid = Bukkit.getOfflinePlayer(userName).getUniqueId().toString();
             manager.addUsdtToPlayer(uuid, tableName);
             player.sendMessage(ChatColor.BLUE+"Полученно USDT: "+tableName);
             return true;
