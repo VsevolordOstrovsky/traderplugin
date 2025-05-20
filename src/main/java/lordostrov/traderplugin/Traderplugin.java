@@ -27,6 +27,18 @@ public final class Traderplugin extends JavaPlugin implements Listener {
 
         getServer().getPluginManager().registerEvents(new InventoryListener(), this);
 
+        managerDB.dropTable("marketPlayer");
+        managerDB.dropTable("player");
+        managerDB.dropTable("cryptoPlayer");
+        managerDB.dropTable("rating");
+
+        boolean success = managerDB.updatePlayerRatings();
+        if (success) {
+            System.out.println("Рейтинг игроков успешно обновлен");
+        } else {
+            System.out.println("Ошибка при обновлении рейтинга");
+        }
+
 
         // Регистрация команд
         /*-----------------*/
@@ -43,7 +55,11 @@ public final class Traderplugin extends JavaPlugin implements Listener {
         // Создание сайдбара для всех онлайн-игроков
         SidebarManager sidebarManager = new SidebarManager(this);
         for (Player player : Bukkit.getOnlinePlayers()) {
-            sidebarManager.createSidebar(player);
+            try {
+                sidebarManager.createSidebar(player);
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
+            }
         }
     }
 

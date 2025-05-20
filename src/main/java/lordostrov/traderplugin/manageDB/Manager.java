@@ -3,6 +3,8 @@ package lordostrov.traderplugin.manageDB;
 import org.bukkit.event.player.PlayerJoinEvent;
 
 import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Manager {
 
@@ -22,9 +24,6 @@ public class Manager {
         String text;
         try {
             connection = DriverManager.getConnection(url);
-            text = "Подключение к базе данных успешно установлено!";
-
-            System.out.println(text);
         } catch (SQLException e) {
             text = "Ошибка при подключении к базе данных:";
             e.printStackTrace();
@@ -47,7 +46,6 @@ public class Manager {
                 connection = null;
             }
             req = "";
-            System.out.println("Connection closed");
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -65,7 +63,7 @@ public class Manager {
                 "    uuid TEXT NOT NULL PRIMARY KEY," +
                 "    name TEXT NOT NULL," +
                 "    usdt TEXT DEFAULT '0'," +
-                "    rating INTEGER NOT NULL UNIQUE" +
+                "    rating INTEGER NOT NULL" +
                 ");";
 
         try (Statement stmt = conn.createStatement()) {
@@ -139,10 +137,7 @@ public class Manager {
     public void createTables() throws SQLException {
 
         // Не забыть удалить строку после отладки!!!
-//        dropTable("marketPlayer");
-//        dropTable("player");
-//        dropTable("cryptoPlayer");
-//        dropTable("rating");
+
         getConnection();
         createTablePlayer(connection);
         createTableCryptoPlayer(connection);
@@ -217,6 +212,27 @@ public class Manager {
         }
     }
 
+    public int countRecordsByUuid(String uuid) {
+        String sql = "SELECT COUNT(*) AS count FROM marketPlayer WHERE uuid = ?";
+
+        getConnection();
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            pstmt.setString(1, uuid);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("count");
+                }
+                return 0;
+            }
+        } catch (SQLException e) {
+            System.err.println("Ошибка при подсчете записей UUID: " + e.getMessage());
+            return -1;
+        } finally {
+            closeConnection();
+        }
+    }
+
 
     public ResultSet executeQuery(String sql) throws SQLException {
         getConnection();
@@ -272,33 +288,6 @@ public class Manager {
         } catch (SQLException e) {
             System.err.println("Ошибка при удалении таблицы " + tableName + ": " + e.getMessage());
             return false;
-        } finally {
-            closeConnection();
-        }
-    }
-
-    /**
-     * Подсчитывает количество записей с указанным UUID в таблице marketPlayer
-     * @param uuid UUID для проверки
-     * @return количество найденных записей (0 если не найдено)
-     */
-    public int countRecordsByUuid(String uuid) {
-        getConnection();
-        try {
-            String sql = "SELECT COUNT(*) AS count FROM marketPlayer WHERE uuid = ?";
-
-            try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
-                pstmt.setString(1, uuid);
-                ResultSet rs = pstmt.executeQuery();
-
-                if (rs.next()) {
-                    return rs.getInt("count");
-                }
-                return 0;
-            }
-        } catch (SQLException e) {
-            System.err.println("Ошибка при подсчёте записей для UUID " + uuid + ": " + e.getMessage());
-            return 0;
         } finally {
             closeConnection();
         }
@@ -446,6 +435,110 @@ public class Manager {
             } catch (SQLException e) {
                 System.err.println("Ошибка восстановления autoCommit: " + e.getMessage());
             }
+            boolean success = updatePlayerRatings();
+            if (success) {
+                System.out.println("Рейтинг игроков успешно обновлен");
+            } else {
+                System.out.println("Ошибка при обновлении рейтинга");
+            }
+        }
+    }
+
+    public boolean updatePlayerRatings() {
+        Connection conn = null;
+        PreparedStatement playerStmt = null;
+        PreparedStatement ratingStmt = null;
+        ResultSet rs = null;
+
+        try {
+            // 1. Получаем соединение и начинаем транзакцию
+            getConnection();
+            conn = this.connection;
+            conn.setAutoCommit(false);
+
+            // 2. Получаем всех игроков с их USDT, отсортированных по убыванию USDT
+            List<PlayerRating> players = new ArrayList<>();
+            String selectSql = "SELECT uuid, usdt FROM player ORDER BY CAST(usdt AS DECIMAL) DESC";
+
+            statement = conn.createStatement();
+            resultSet = statement.executeQuery(selectSql);
+
+            while (resultSet.next()) {
+                players.add(new PlayerRating(
+                        resultSet.getString("uuid"),
+                        resultSet.getString("usdt")
+                ));
+            }
+
+            // 3. Обновляем рейтинг в таблице player
+            String updatePlayerSql = "UPDATE player SET rating = ? WHERE uuid = ?";
+            playerStmt = conn.prepareStatement(updatePlayerSql);
+
+            for (int i = 0; i < players.size(); i++) {
+                playerStmt.setInt(1, i + 1); // Рейтинг начинается с 1
+                playerStmt.setString(2, players.get(i).uuid);
+                playerStmt.addBatch();
+            }
+            playerStmt.executeBatch();
+
+            // 4. Полностью перезаписываем таблицу rating
+            // Сначала очищаем
+            try (Statement clearStmt = conn.createStatement()) {
+                clearStmt.execute("DELETE FROM rating");
+            }
+
+            // Затем вставляем новые данные
+            String insertRatingSql = "INSERT INTO rating (rating, uuid, usdt) VALUES (?, ?, ?)";
+            ratingStmt = conn.prepareStatement(insertRatingSql);
+
+            for (int i = 0; i < players.size(); i++) {
+                PlayerRating player = players.get(i);
+                ratingStmt.setInt(1, i + 1);
+                ratingStmt.setString(2, player.uuid);
+                ratingStmt.setString(3, player.usdt);
+                ratingStmt.addBatch();
+            }
+            ratingStmt.executeBatch();
+
+            conn.commit();
+            return true;
+
+        } catch (SQLException e) {
+            try {
+                if (conn != null) conn.rollback();
+            } catch (SQLException ex) {
+                System.err.println("Ошибка при откате: " + ex.getMessage());
+            }
+            System.err.println("Ошибка обновления рейтинга: " + e.getMessage());
+            return false;
+        } finally {
+            // Закрываем ресурсы
+            try { if (rs != null) rs.close(); } catch (SQLException e) { /* игнорируем */ }
+            try { if (playerStmt != null) playerStmt.close(); } catch (SQLException e) { /* игнорируем */ }
+            try { if (ratingStmt != null) ratingStmt.close(); } catch (SQLException e) { /* игнорируем */ }
+
+            // Восстанавливаем autoCommit
+            try {
+                if (conn != null) {
+                    conn.setAutoCommit(true);
+                }
+            } catch (SQLException e) {
+                System.err.println("Ошибка восстановления autoCommit: " + e.getMessage());
+            }
+
+            // Закрываем соединение (вызываем closeConnection())
+            closeConnection();
+        }
+    }
+
+    // Вспомогательный класс для хранения данных игрока
+    private static class PlayerRating {
+        String uuid;
+        String usdt;
+
+        PlayerRating(String uuid, String usdt) {
+            this.uuid = uuid;
+            this.usdt = usdt;
         }
     }
 }
