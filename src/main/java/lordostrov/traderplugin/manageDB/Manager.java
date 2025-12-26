@@ -52,18 +52,16 @@ public class Manager {
     }
 
     private static void createTablePlayer(Connection conn) throws SQLException {
-
         if (tableExists(conn, "player")) {
             System.out.println("Таблица [player] уже существует, пропускаем создание");
             return;
         }
 
-
         String sql = "CREATE TABLE IF NOT EXISTS player(" +
                 "    uuid TEXT NOT NULL PRIMARY KEY," +
                 "    name TEXT NOT NULL," +
                 "    usdt TEXT DEFAULT '0'," +
-                "    rating INTEGER NOT NULL" +
+                "    rating INTEGER DEFAULT 0" +
                 ");";
 
         try (Statement stmt = conn.createStatement()) {
@@ -114,29 +112,68 @@ public class Manager {
     }
 
     private static void createTableRating(Connection conn) throws SQLException {
-
         if (tableExists(conn, "rating")) {
             System.out.println("Таблица [rating] уже существует, пропускаем создание");
             return;
         }
 
         String sql = "CREATE TABLE IF NOT EXISTS rating(" +
-                "    rating INTEGER NOT NULL," +
-                "    uuid TEXT NOT NULL," +
-                "    usdt TEXT NOT null," +
-                "    FOREIGN KEY (uuid) REFERENCES player(uuid)," +
-                "    FOREIGN KEY (rating) REFERENCES player(rating)," +
-                "    FOREIGN KEY (usdt) REFERENCES player(usdt)" +
+                "    id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                "    player_uuid TEXT NOT NULL," +
+                "    rating_value INTEGER NOT NULL," +
+                "    usdt_value TEXT NOT NULL," +
+                "    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP," +
+                "    FOREIGN KEY (player_uuid) REFERENCES player(uuid) ON DELETE CASCADE" +
                 ");";
 
         try (Statement stmt = conn.createStatement()) {
             stmt.execute(sql);
         }
+
+        // Создаем триггер для обновления rating в таблице player
+        createTriggers(conn);
+    }
+
+    private static void createTriggers(Connection conn) throws SQLException {
+        // Триггер 1: При обновлении rating в таблице rating, обновляем rating в player
+        String trigger1 = "CREATE TRIGGER IF NOT EXISTS update_player_rating " +
+                "AFTER UPDATE OF rating_value ON rating " +
+                "BEGIN " +
+                "    UPDATE player SET rating = NEW.rating_value " +
+                "    WHERE uuid = NEW.player_uuid AND " +
+                "          (SELECT rating_value FROM rating " +
+                "           WHERE player_uuid = NEW.player_uuid " +
+                "           ORDER BY updated_at DESC LIMIT 1) = NEW.rating_value; " +
+                "END;";
+
+        // Триггер 2: При обновлении usdt в таблице player, добавляем запись в rating
+        String trigger2 = "CREATE TRIGGER IF NOT EXISTS update_rating_on_usdt_change " +
+                "AFTER UPDATE OF usdt ON player " +
+                "WHEN OLD.usdt != NEW.usdt " +
+                "BEGIN " +
+                "    INSERT INTO rating (player_uuid, rating_value, usdt_value) " +
+                "    VALUES (NEW.uuid, NEW.rating, NEW.usdt); " +
+                "END;";
+
+        // Триггер 3: При обновлении rating в таблице player, добавляем запись в rating
+        String trigger3 = "CREATE TRIGGER IF NOT EXISTS update_rating_on_rating_change " +
+                "AFTER UPDATE OF rating ON player " +
+                "WHEN OLD.rating != NEW.rating " +
+                "BEGIN " +
+                "    INSERT INTO rating (player_uuid, rating_value, usdt_value) " +
+                "    VALUES (NEW.uuid, NEW.rating, NEW.usdt); " +
+                "END;";
+
+        try (Statement stmt = conn.createStatement()) {
+            stmt.execute(trigger1);
+            stmt.execute(trigger2);
+            stmt.execute(trigger3);
+        }
     }
 
     public void createTables() throws SQLException {
 
-        // Не забыть удалить строку после отладки!!!
+
 
         getConnection();
         createTablePlayer(connection);
@@ -190,9 +227,9 @@ public class Manager {
                 cryptoStmt.executeUpdate();
             }
 
-            // Добавляем в rating
+            // Добавляем в rating - ИСПРАВЛЕННЫЙ ЗАПРОС
             try (PreparedStatement ratingStmt = connection.prepareStatement(
-                    "INSERT INTO rating (rating, uuid, usdt) VALUES (?, ?, ?)")) {
+                    "INSERT INTO rating (rating_value, player_uuid, usdt_value) VALUES (?, ?, ?)")) {
                 ratingStmt.setInt(1, nextRating);
                 ratingStmt.setString(2, uuid);
                 ratingStmt.setString(3, "0"); // Начальный баланс USDT
@@ -487,15 +524,15 @@ public class Manager {
                 clearStmt.execute("DELETE FROM rating");
             }
 
-            // Затем вставляем новые данные
-            String insertRatingSql = "INSERT INTO rating (rating, uuid, usdt) VALUES (?, ?, ?)";
+            // ИСПРАВЛЕННАЯ СТРОКА - используем правильные имена колонок
+            String insertRatingSql = "INSERT INTO rating (rating_value, player_uuid, usdt_value) VALUES (?, ?, ?)";
             ratingStmt = conn.prepareStatement(insertRatingSql);
 
             for (int i = 0; i < players.size(); i++) {
                 PlayerRating player = players.get(i);
-                ratingStmt.setInt(1, i + 1);
-                ratingStmt.setString(2, player.uuid);
-                ratingStmt.setString(3, player.usdt);
+                ratingStmt.setInt(1, i + 1); // rating_value
+                ratingStmt.setString(2, player.uuid); // player_uuid
+                ratingStmt.setString(3, player.usdt); // usdt_value
                 ratingStmt.addBatch();
             }
             ratingStmt.executeBatch();

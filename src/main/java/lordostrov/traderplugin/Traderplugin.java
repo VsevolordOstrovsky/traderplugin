@@ -27,11 +27,32 @@ public final class Traderplugin extends JavaPlugin implements Listener {
 
         getServer().getPluginManager().registerEvents(new InventoryListener(), this);
 
+        /*
+         ===============================================================================
+         ========                    Нужно будет удалить                        ========
+         ===============================================================================
+         */
         managerDB.dropTable("marketPlayer");
         managerDB.dropTable("player");
         managerDB.dropTable("cryptoPlayer");
         managerDB.dropTable("rating");
+        /* ================================================================================*/
 
+
+
+        // 1. Сначала создаем таблицы СИНХРОННО
+        try {
+            System.out.println("[TraderPlugin] Создание таблиц БД...");
+            managerDB.createTables();
+            System.out.println("[TraderPlugin] Таблицы БД успешно созданы");
+        } catch (SQLException e) {
+            System.out.println("[TraderPlugin] КРИТИЧЕСКАЯ ОШИБКА при создании таблиц:");
+            e.printStackTrace();
+            getServer().getPluginManager().disablePlugin(this);
+            return;
+        }
+
+        // Обновление рейтинга игроков.
         boolean success = managerDB.updatePlayerRatings();
         if (success) {
             System.out.println("Рейтинг игроков успешно обновлен");
@@ -72,8 +93,6 @@ public final class Traderplugin extends JavaPlugin implements Listener {
 
         Bukkit.getScheduler().runTaskAsynchronously(this, () -> {
             try {
-                // Создаем таблицы если их нет
-                managerDB.createTables();
                 // Добавляем игрока если его нет в БД
                 managerDB.addPlayerIfNotExists(event);
             } catch (SQLException e) {

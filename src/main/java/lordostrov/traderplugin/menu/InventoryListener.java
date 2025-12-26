@@ -264,6 +264,11 @@ public class InventoryListener implements Listener {
         player.openInventory(newInv);
     }
 
+
+
+
+
+    /* ------------------------------------------------------------------------------------------------------- К п1 По Покупка/Продажа Фиксы*/
     private void pushItemToMarket(Player player, Inventory inventory){
         Map<Material, Integer> mapItem = manageInventory.getItemsToMarket(inventory);
         Map.Entry<Material, Integer> entry = mapItem.entrySet().iterator().next();
@@ -313,6 +318,8 @@ public class InventoryListener implements Listener {
 
     }
 
+    /* ------------------------------------------------------------------------------------------------------- К п5 По Покупка/Продажа Фиксы*/
+    /* ------------------------------------------------------------------------------------------------------- К п1 По Покупка/Продажа Фиксы*/
     private void givePlayerItemsFromMarket(Player player, Material material) {
         Manager dbManager = new Manager();
 
